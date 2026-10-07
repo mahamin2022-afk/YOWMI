@@ -259,7 +259,9 @@ internal class TurkishJourneyStore(context: Context) {
     fun sprint(month: YearMonth = YearMonth.now()): TurkishSprint {
         val target = monthlyTarget(month)
         val planned = sprintPlan(month, target)
-        val completedMonth = completedInMonth(month)
+        val plannedLessons = planned.mapNotNull { id -> allTurkishLessons.firstOrNull { it.id == id } }
+        val completedMonth = plannedLessons.count { isLessonComplete(it) }
+        val sectionProgress = plannedLessons.sumOf { completedSections(it) }
         val remaining = (allTurkishLessons.size - completedLessonCount()).coerceAtLeast(0)
         val pace = ceil(target / 4.0).toInt().coerceAtLeast(1)
         val months = if (remaining == 0) 0 else ceil(remaining / target.toDouble()).toInt()
@@ -268,7 +270,7 @@ internal class TurkishJourneyStore(context: Context) {
             targetLessons = target,
             plannedLessonIds = planned,
             completedThisMonth = completedMonth,
-            completedSectionsThisMonth = completedSectionsInMonth(month),
+            completedSectionsThisMonth = sectionProgress,
             weeklyPace = pace,
             remainingCourseLessons = remaining,
             estimatedMonthsRemaining = months
