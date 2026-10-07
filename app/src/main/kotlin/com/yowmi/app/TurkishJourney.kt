@@ -168,6 +168,7 @@ internal class TurkishJourneyStore(context: Context) {
     fun setSectionDone(lessonId: String, sectionIndex: Int, done: Boolean) {
         val key = "section_${lessonId}_$sectionIndex"
         val editor = prefs.edit().putBoolean(key, done)
+        if (done) editor.putBoolean("activity_${LocalDate.now()}", true)
         if (done && isLessonCompleteAfterChange(lessonId, sectionIndex)) {
             if (!prefs.contains("lesson_completed_at_$lessonId")) {
                 editor.putString("lesson_completed_at_$lessonId", LocalDate.now().toString())
@@ -195,6 +196,24 @@ internal class TurkishJourneyStore(context: Context) {
         turkishLessonSections.indices.count { isSectionDone(lesson.id, it) }
 
     fun completedLessonCount(): Int = allTurkishLessons.count { isLessonComplete(it) }
+
+    fun totalCompletedSections(): Int =
+        allTurkishLessons.sumOf { completedSections(it) }
+
+    fun xp(): Int =
+        totalCompletedSections() * 5 + turkishLevels.sumOf { reviewCheckpointsDone(it.id) } * 30
+
+    fun currentStreak(): Int {
+        var streak = 0
+        var date = LocalDate.now()
+        repeat(366) {
+            if (prefs.getBoolean("activity_$date", false)) {
+                streak++
+                date = date.minusDays(1)
+            } else return streak
+        }
+        return streak
+    }
 
     fun currentLesson(): TurkishLesson? = allTurkishLessons.firstOrNull { !isLessonComplete(it) }
 
