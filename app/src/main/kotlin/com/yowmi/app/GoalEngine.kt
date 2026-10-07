@@ -153,7 +153,8 @@ internal val workCheckpoints = listOf(
 )
 
 internal class GoalJourneyStore(context: Context) {
-    private val prefs = context.getSharedPreferences("goal_journeys_v1", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("goal_journeys_v1", Context.MODE_PRIVATE)
 
     fun quranTargetKhatmas(): Int = prefs.getInt("quran_target_khatmas", 2).coerceAtLeast(1)
     fun setQuranTargetKhatmas(value: Int) = prefs.edit().putInt("quran_target_khatmas", value.coerceIn(1, 10)).apply()
@@ -178,8 +179,9 @@ internal class GoalJourneyStore(context: Context) {
     fun isTurkishMissionDone(id: String): Boolean = prefs.getBoolean("turkish_$id", false)
     fun setTurkishMissionDone(id: String, done: Boolean) = prefs.edit().putBoolean("turkish_$id", done).apply()
     fun turkishOverview(): GoalOverview {
-        val done = turkishMissions.count { isTurkishMissionDone(it.id) }
-        val target = turkishMissions.size
+        val journey = TurkishJourneyStore(appContext)
+        val done = journey.completedLessonCount()
+        val target = allTurkishLessons.size
         return overview(done, target, streakBoolean("tr_day_"))
     }
 
