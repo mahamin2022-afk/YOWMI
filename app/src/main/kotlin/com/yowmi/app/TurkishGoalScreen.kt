@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -59,7 +58,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -109,12 +107,13 @@ internal fun ContinuousTurkishGoalScreen(
 
     androidx.compose.foundation.lazy.LazyColumn(
         modifier = modifier.fillMaxSize().background(TurkishBg),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 100.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
             TurkishHero(
-                completed = store.completedLessonCount(),
+                completedLessons = store.completedLessonCount(),
+                completedVocabulary = store.totalCompletedVocabulary(),
                 xp = store.xp(),
                 streak = store.currentStreak(),
                 currentLevel = currentLevel,
@@ -158,9 +157,15 @@ internal fun ContinuousTurkishGoalScreen(
         }
 
         item {
+            CurriculumSummaryCard()
+        }
+
+        item {
             SprintCard(
                 monthLabel = month.atDay(1).format(monthFormatter),
                 sprint = sprint,
+                currentLevel = currentLevel,
+                monthsForCurrentLevel = store.estimatedMonthsForLevel(currentLevel, month),
                 onEdit = { showSprintDialog = true }
             )
         }
@@ -168,7 +173,7 @@ internal fun ContinuousTurkishGoalScreen(
         item {
             Text("المسار الكامل", color = TurkishNavy, fontSize = 20.sp, fontWeight = FontWeight.Black)
             Text(
-                "التقدم ما بيتصفّر بنهاية الشهر؛ الشهر فقط Sprint للتنظيم، والمسار يكمل تلقائيًا للشهر اللي بعده.",
+                "الإنجاز محفوظ دائمًا. الشهر مجرد خطة تنفيذ؛ إذا ما خلصتيها، الدروس المتبقية بتسبق الدروس الجديدة بالشهر التالي.",
                 color = TurkishMuted,
                 fontSize = 12.sp
             )
@@ -192,21 +197,24 @@ internal fun ContinuousTurkishGoalScreen(
             )
         }
 
-        for (block in 1..3) {
-            val startLocal = (block - 1) * 6 + 1
-            val endLocal = block * 6
-            val blockLessons = selectedLevel.lessons.filter { it.localNumber in startLocal..endLocal }
+        val ranges = lessonBlocks(selectedLevel)
+        ranges.forEachIndexed { blockIndex, range ->
+            val blockLessons = selectedLevel.lessons.filter { it.localNumber in range }
 
             item {
                 LessonBlockHeader(
-                    block = block,
+                    block = blockIndex + 1,
+                    range = range,
                     completed = blockLessons.count { store.isLessonComplete(it) },
                     total = blockLessons.size,
-                    color = TurkishBlue
+                    color = levelColor(selectedLevel.id)
                 )
             }
 
-            items(blockLessons.size) { index ->
+            items(
+                count = blockLessons.size,
+                key = { index -> blockLessons[index].id }
+            ) { index ->
                 val lesson = blockLessons[index]
                 LessonProgressCard(
                     lesson = lesson,
@@ -217,10 +225,6 @@ internal fun ContinuousTurkishGoalScreen(
                     onToggleSection = { sectionIndex, done ->
                         store.setSectionDone(lesson.id, sectionIndex, done)
                         refresh++
-                    },
-                    onCompleteLesson = {
-                        store.markLessonComplete(lesson.id, true)
-                        refresh++
                     }
                 )
             }
@@ -228,12 +232,13 @@ internal fun ContinuousTurkishGoalScreen(
             item {
                 ReviewCheckpointCard(
                     level = selectedLevel,
-                    block = block,
-                    unlocked = blockLessons.all { store.isLessonComplete(it) },
-                    isDone = store.reviewBlockDone(selectedLevel.id, block),
-                    itemDone = { idx -> store.reviewDone(selectedLevel.id, block, idx) },
+                    block = blockIndex + 1,
+                    afterLesson = selectedLevel.reviewAfterLessonNumbers[blockIndex],
+                    unlocked = store.reviewUnlocked(selectedLevel, blockIndex + 1),
+                    isDone = store.reviewBlockDone(selectedLevel.id, blockIndex + 1),
+                    itemDone = { idx -> store.reviewDone(selectedLevel.id, blockIndex + 1, idx) },
                     onToggleItem = { idx, done ->
-                        store.setReviewDone(selectedLevel.id, block, idx, done)
+                        store.setReviewDone(selectedLevel.id, blockIndex + 1, idx, done)
                         refresh++
                     }
                 )
@@ -241,7 +246,29 @@ internal fun ContinuousTurkishGoalScreen(
         }
 
         item {
-            CourseForecastCard(sprint = sprint)
+            FinalExamCard(
+                level = selectedLevel,
+                unlocked = store.examUnlocked(selectedLevel),
+                completed = store.levelExamDone(selectedLevel.id),
+                partsDone = store.examPartsDone(selectedLevel.id),
+                partDone = { idx -> store.examPartDone(selectedLevel.id, idx) },
+                onTogglePart = { idx, done ->
+                    store.setExamPartDone(selectedLevel.id, idx, done)
+                    refresh++
+                    if (store.levelExamDone(selectedLevel.id)) {
+                        val currentIndex = turkishLevels.indexOfFirst { it.id == selectedLevel.id }
+                        turkishLevels.getOrNull(currentIndex + 1)?.let { selectedLevelId = it.id }
+                    }
+                }
+            )
+        }
+
+        item {
+            CourseForecastCard(
+                store = store,
+                sprint = sprint,
+                currentLevel = currentLevel
+            )
         }
     }
 
@@ -260,13 +287,15 @@ internal fun ContinuousTurkishGoalScreen(
 
 @Composable
 private fun TurkishHero(
-    completed: Int,
+    completedLessons: Int,
+    completedVocabulary: Int,
     xp: Int,
     streak: Int,
     currentLevel: TurkishLevelPlan,
     currentLesson: TurkishLesson?
 ) {
-    val overallRatio = completed.toFloat() / allTurkishLessons.size
+    val overallRatio = completedLessons.toFloat() / allTurkishLessons.size
+
     Card(
         shape = RoundedCornerShape(32.dp),
         colors = CardDefaults.cardColors(containerColor = TurkishNavy)
@@ -284,14 +313,14 @@ private fun TurkishHero(
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("Türkçe Yolculuğu", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                    Text("A1 → A2 → B1 → B2", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
+                    Text("A1 → A2 → B1 • منهاج واحد متدرج", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
                 }
                 Surface(shape = RoundedCornerShape(17.dp), color = Color.White.copy(alpha = .12f)) {
                     Column(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("المستوى", color = Color.White.copy(alpha = .62f), fontSize = 8.sp)
+                        Text("الحالي", color = Color.White.copy(alpha = .62f), fontSize = 8.sp)
                         Text(currentLevel.id, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     }
                 }
@@ -306,15 +335,20 @@ private fun TurkishHero(
             )
             Spacer(Modifier.height(7.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("$completed / ${allTurkishLessons.size} درس", color = Color.White.copy(alpha = .76f), fontSize = 11.sp)
+                Text("$completedLessons / 58 درس/مهارة", color = Color.White.copy(alpha = .76f), fontSize = 11.sp)
                 Text("${(overallRatio * 100).toInt()}%", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
             }
 
             Spacer(Modifier.height(15.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 HeroStat("$xp XP", TurkishPink)
-                HeroStat("$streak يوم", TurkishTeal)
-                HeroStat("${turkishLessonSections.size} فقرات/درس", TurkishOrange)
+                HeroStat("$streak يوم متتالي", TurkishTeal)
+                HeroStat("$completedVocabulary / 2700 كلمة", TurkishOrange)
+                HeroStat("10 مراجعات", TurkishPurple)
+                HeroStat("3 اختبارات", TurkishGreen)
             }
 
             currentLesson?.let {
@@ -325,13 +359,14 @@ private fun TurkishHero(
                     color = Color.White.copy(alpha = .10f)
                 ) {
                     Column(Modifier.padding(13.dp)) {
-                        Text("الدرس التالي", color = Color.White.copy(alpha = .60f), fontSize = 10.sp)
+                        Text("المهمة التعليمية التالية", color = Color.White.copy(alpha = .60f), fontSize = 10.sp)
                         Text(
-                            "${it.level} • الدرس ${it.localNumber} — ${it.title}",
+                            "${it.level} • ${it.localNumber}. ${it.title}",
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
+                        Text(it.arabicTitle, color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
                     }
                 }
             }
@@ -353,16 +388,59 @@ private fun HeroStat(text: String, color: Color) {
 }
 
 @Composable
+private fun CurriculumSummaryCard() {
+    Card(
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, TurkishBorder)
+    ) {
+        Column(Modifier.padding(17.dp)) {
+            Text("بنية المنهاج المعتمدة", color = TurkishNavy, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(11.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SummaryMetric(Modifier.weight(1f), "A1", "22", TurkishBlue)
+                SummaryMetric(Modifier.weight(1f), "A2", "18", TurkishTeal)
+                SummaryMetric(Modifier.weight(1f), "B1", "18", TurkishPurple)
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SummaryMetric(Modifier.weight(1f), "المفردات", "2700", TurkishOrange)
+                SummaryMetric(Modifier.weight(1f), "المراجعات", "10", TurkishPink)
+                SummaryMetric(Modifier.weight(1f), "الاختبارات", "3", TurkishGreen)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryMetric(modifier: Modifier, title: String, value: String, color: Color) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        color = color.copy(alpha = .08f)
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 11.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(value, color = color, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(title, color = TurkishMuted, fontSize = 9.sp)
+        }
+    }
+}
+
+@Composable
 private fun SprintCard(
     monthLabel: String,
     sprint: TurkishSprint,
+    currentLevel: TurkishLevelPlan,
+    monthsForCurrentLevel: Int,
     onEdit: () -> Unit
 ) {
-    val lessonRatio = if (sprint.targetLessons == 0) 0f
-        else sprint.completedThisMonth.toFloat() / sprint.targetLessons
-    val sectionTarget = sprint.plannedLessonIds.size * turkishLessonSections.size
-    val sectionRatio = if (sectionTarget == 0) 0f
-        else sprint.completedSectionsThisMonth.toFloat() / sectionTarget
+    val lessonTarget = sprint.plannedLessonIds.size
+    val lessonRatio = if (lessonTarget == 0) 0f else sprint.completedThisMonth.toFloat() / lessonTarget
+    val sectionTarget = lessonTarget * 6
+    val sectionRatio = if (sectionTarget == 0) 0f else sprint.completedSectionsThisMonth.toFloat() / sectionTarget
 
     Card(
         shape = RoundedCornerShape(30.dp),
@@ -381,7 +459,7 @@ private fun SprintCard(
                 }
                 Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Sprint الشهر", color = TurkishNavy, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                    Text("خطة إنجاز الشهر", color = TurkishNavy, fontSize = 19.sp, fontWeight = FontWeight.Black)
                     Text(monthLabel, color = TurkishMuted, fontSize = 11.sp)
                 }
                 OutlinedButton(
@@ -395,33 +473,33 @@ private fun SprintCard(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(15.dp))
             Text(
-                "هدف الشهر: ${sprint.targetLessons} درس",
+                "هدف الشهر: ${sprint.targetLessons} درس/مهارة",
                 color = TurkishNavy,
-                fontWeight = FontWeight.Black,
-                fontSize = 16.sp
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black
             )
             Text(
-                "يعادل تقريبًا ${sprint.targetLessons * turkishLessonSections.size} فقرة تعليمية • ${sprint.weeklyPace} دروس بالأسبوع.",
+                "≈ ${sprint.weeklyPace} دروس بالأسبوع • حتى ${sprint.targetLessons * 6} فقرة إنجاز.",
                 color = TurkishMuted,
                 fontSize = 11.sp
             )
 
-            Spacer(Modifier.height(13.dp))
+            Spacer(Modifier.height(12.dp))
             LinearProgressIndicator(
                 progress = { lessonRatio.coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(9.dp).clip(CircleShape),
                 color = TurkishBlue,
                 trackColor = TurkishBlue.copy(alpha = .10f)
             )
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(5.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("الدروس: ${sprint.completedThisMonth}/${sprint.targetLessons}", color = TurkishBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text("الدروس ${sprint.completedThisMonth}/$lessonTarget", color = TurkishBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 Text("${(lessonRatio * 100).toInt().coerceAtMost(100)}%", color = TurkishNavy, fontSize = 11.sp, fontWeight = FontWeight.Black)
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(11.dp))
             LinearProgressIndicator(
                 progress = { sectionRatio.coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),
@@ -430,18 +508,26 @@ private fun SprintCard(
             )
             Spacer(Modifier.height(5.dp))
             Text(
-                "الفقرات: ${sprint.completedSectionsThisMonth}/$sectionTarget",
+                "الفقرات ${sprint.completedSectionsThisMonth}/$sectionTarget",
                 color = TurkishPink,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold
             )
 
-            if (sprint.plannedLessonIds.size < sprint.targetLessons) {
-                Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = TurkishBlue.copy(alpha = .06f)
+            ) {
                 Text(
-                    "باقي المسار أقل من هدف الشهر، لذلك الخطة الحالية فيها ${sprint.plannedLessonIds.size} درس فقط.",
-                    color = TurkishGreen,
-                    fontSize = 10.sp
+                    if (monthsForCurrentLevel <= 1)
+                        "بهذا الإيقاع ممكن تكملي دروس ${currentLevel.id} ضمن Sprint واحد تقريبًا، مع المراجعات والاختبار."
+                    else
+                        "دروس ${currentLevel.id} تحتاج تقريبًا $monthsForCurrentLevel Sprint شهري بهذا الإيقاع، والتقدم بيستمر بدون تصفير.",
+                    modifier = Modifier.padding(12.dp),
+                    color = TurkishNavy,
+                    fontSize = 11.sp
                 )
             }
         }
@@ -462,17 +548,12 @@ private fun LevelJourneyMap(
             val completed = store.levelCompletedLessons(level)
             val unlocked = store.isLevelUnlocked(level)
             val selected = level.id == selectedLevelId
-            val complete = completed == level.lessons.size && store.reviewCheckpointsDone(level.id) == 3
-            val color = when (level.id) {
-                "A1" -> TurkishBlue
-                "A2" -> TurkishTeal
-                "B1" -> TurkishPurple
-                else -> TurkishPink
-            }
+            val complete = store.isLevelComplete(level)
+            val color = levelColor(level.id)
 
             Surface(
                 modifier = Modifier
-                    .width(145.dp)
+                    .width(170.dp)
                     .clickable(enabled = unlocked) { onSelectLevel(level) },
                 shape = RoundedCornerShape(24.dp),
                 color = when {
@@ -496,22 +577,27 @@ private fun LevelJourneyMap(
                             !unlocked -> Icon(Icons.Rounded.Lock, null, tint = TurkishMuted, modifier = Modifier.size(17.dp))
                         }
                     }
-                    Spacer(Modifier.height(9.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "$completed/18 درس",
-                        color = if (selected) Color.White.copy(alpha = .85f) else TurkishMuted,
+                        "$completed/${level.lessons.size} درس/مهارة",
+                        color = if (selected) Color.White.copy(alpha = .88f) else TurkishMuted,
                         fontSize = 10.sp
                     )
-                    Spacer(Modifier.height(7.dp))
+                    Spacer(Modifier.height(6.dp))
                     LinearProgressIndicator(
-                        progress = { completed / 18f },
+                        progress = { completed.toFloat() / level.lessons.size },
                         modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
                         color = if (selected) Color.White else color,
                         trackColor = if (selected) Color.White.copy(alpha = .20f) else color.copy(alpha = .10f)
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(7.dp))
                     Text(
-                        "${store.reviewCheckpointsDone(level.id)}/3 مراجعات",
+                        "900 مفردة • ${level.reviewAfterLessonNumbers.size} مراجعات",
+                        color = if (selected) Color.White.copy(alpha = .70f) else TurkishMuted,
+                        fontSize = 9.sp
+                    )
+                    Text(
+                        if (store.levelExamDone(level.id)) "الاختبار مكتمل" else "اختبار نهاية المستوى",
                         color = if (selected) Color.White.copy(alpha = .70f) else TurkishMuted,
                         fontSize = 9.sp
                     )
@@ -528,9 +614,12 @@ private fun SelectedLevelHeader(
     isCurrent: Boolean
 ) {
     val completed = store.levelCompletedLessons(level)
+    val color = levelColor(level.id)
+
     Card(
         shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, color.copy(alpha = .15f))
     ) {
         Column(Modifier.padding(17.dp)) {
             Row(verticalAlignment = Alignment.Top) {
@@ -539,37 +628,62 @@ private fun SelectedLevelHeader(
                     Text(level.subtitle, color = TurkishMuted, fontSize = 11.sp)
                 }
                 if (isCurrent) {
-                    Surface(shape = RoundedCornerShape(50), color = TurkishBlue.copy(alpha = .10f)) {
+                    Surface(shape = RoundedCornerShape(50), color = color.copy(alpha = .10f)) {
                         Text(
                             "المستوى الحالي",
                             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                            color = TurkishBlue,
+                            color = color,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
+
+            Spacer(Modifier.height(13.dp))
             LinearProgressIndicator(
-                progress = { completed / 18f },
+                progress = { store.currentLevelRatio().takeIf { isCurrent } ?: (completed.toFloat() / level.lessons.size) },
                 modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                color = TurkishBlue,
-                trackColor = TurkishBlue.copy(alpha = .10f)
+                color = color,
+                trackColor = color.copy(alpha = .10f)
             )
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "$completed من 18 درس • ${store.reviewCheckpointsDone(level.id)} من 3 جلسات مراجعة",
-                color = TurkishMuted,
-                fontSize = 10.sp
+            Spacer(Modifier.height(8.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                LevelStat("$completed/${level.lessons.size} دروس", color)
+                LevelStat("${store.completedVocabulary(level)}/900 كلمة", TurkishOrange)
+                LevelStat("${store.reviewCheckpointsDone(level.id)}/${level.reviewAfterLessonNumbers.size} مراجعات", TurkishPink)
+            }
+            Spacer(Modifier.height(7.dp))
+            LevelStat(
+                "الاختبار ${store.examPartsDone(level.id)}/${turkishExamParts.size}",
+                if (store.levelExamDone(level.id)) TurkishGreen else TurkishPurple
             )
         }
     }
 }
 
 @Composable
-private fun LessonBlockHeader(block: Int, completed: Int, total: Int, color: Color) {
-    val labels = listOf("المرحلة الأولى", "المرحلة الثانية", "المرحلة الثالثة")
+private fun LevelStat(text: String, color: Color) {
+    Surface(shape = RoundedCornerShape(50), color = color.copy(alpha = .09f)) {
+        Text(
+            text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+            color = color,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}
+
+@Composable
+private fun LessonBlockHeader(
+    block: Int,
+    range: IntRange,
+    completed: Int,
+    total: Int,
+    color: Color
+) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -584,8 +698,8 @@ private fun LessonBlockHeader(block: Int, completed: Int, total: Int, color: Col
         }
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
-            Text(labels[block - 1], color = TurkishNavy, fontWeight = FontWeight.Black, fontSize = 16.sp)
-            Text("6 دروس ثم جلسة مراجعة", color = TurkishMuted, fontSize = 10.sp)
+            Text("مرحلة الدروس ${range.first}–${range.last}", color = TurkishNavy, fontWeight = FontWeight.Black, fontSize = 16.sp)
+            Text("بعدها مراجعة مرحلية إلزامية", color = TurkishMuted, fontSize = 10.sp)
         }
         Text("$completed/$total", color = color, fontWeight = FontWeight.Black)
     }
@@ -598,10 +712,12 @@ private fun LessonProgressCard(
     plannedThisMonth: Boolean,
     sectionsDone: Int,
     sectionState: (Int) -> Boolean,
-    onToggleSection: (Int, Boolean) -> Unit,
-    onCompleteLesson: () -> Unit
+    onToggleSection: (Int, Boolean) -> Unit
 ) {
-    val complete = sectionsDone == turkishLessonSections.size
+    val complete = sectionsDone == 6
+    val color = levelColor(lesson.level)
+    val labels = lessonSectionLabels(lesson)
+
     Card(
         shape = RoundedCornerShape(25.dp),
         colors = CardDefaults.cardColors(
@@ -615,7 +731,7 @@ private fun LessonProgressCard(
             1.dp,
             when {
                 complete -> TurkishGreen.copy(alpha = .30f)
-                plannedThisMonth -> TurkishBlue.copy(alpha = .30f)
+                plannedThisMonth -> TurkishPink.copy(alpha = .35f)
                 else -> TurkishBorder
             }
         )
@@ -624,11 +740,11 @@ private fun LessonProgressCard(
             Row(verticalAlignment = Alignment.Top) {
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(44.dp)
                         .background(
                             when {
                                 complete -> TurkishGreen
-                                unlocked -> TurkishBlue.copy(alpha = .12f)
+                                unlocked -> color.copy(alpha = .12f)
                                 else -> Color(0xFFE0E5ED)
                             },
                             RoundedCornerShape(14.dp)
@@ -638,14 +754,15 @@ private fun LessonProgressCard(
                     when {
                         complete -> Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
                         !unlocked -> Icon(Icons.Rounded.Lock, null, tint = TurkishMuted, modifier = Modifier.size(18.dp))
-                        else -> Text("${lesson.localNumber}", color = TurkishBlue, fontWeight = FontWeight.Black)
+                        else -> Text("${lesson.localNumber}", color = color, fontWeight = FontWeight.Black)
                     }
                 }
+
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            "${lesson.level} • الدرس ${lesson.localNumber}",
+                            "${lesson.level} • الدرس/المهارة ${lesson.localNumber}",
                             color = TurkishMuted,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold
@@ -654,7 +771,7 @@ private fun LessonProgressCard(
                             Spacer(Modifier.width(6.dp))
                             Surface(shape = RoundedCornerShape(50), color = TurkishPink.copy(alpha = .10f)) {
                                 Text(
-                                    "ضمن خطة الشهر",
+                                    "خطة الشهر",
                                     modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                                     color = TurkishPink,
                                     fontSize = 8.sp,
@@ -663,15 +780,22 @@ private fun LessonProgressCard(
                             }
                         }
                     }
+
                     Text(
                         lesson.title,
                         color = if (unlocked) TurkishNavy else TurkishMuted,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Black
                     )
+                    Text(lesson.arabicTitle, color = TurkishMuted, fontSize = 11.sp)
+                    if (lesson.focus.isNotBlank()) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(lesson.focus, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Spacer(Modifier.height(4.dp))
                     Text(
-                        "$sectionsDone/${turkishLessonSections.size} فقرات",
-                        color = if (complete) TurkishGreen else TurkishBlue,
+                        "$sectionsDone/6 فقرات • ${lesson.vocabularyTarget} مفردة",
+                        color = if (complete) TurkishGreen else color,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -680,7 +804,7 @@ private fun LessonProgressCard(
 
             if (unlocked && !complete) {
                 Spacer(Modifier.height(12.dp))
-                turkishLessonSections.forEachIndexed { index, section ->
+                labels.forEachIndexed { index, section ->
                     val done = sectionState(index)
                     Row(
                         modifier = Modifier
@@ -692,8 +816,8 @@ private fun LessonProgressCard(
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
-                                .background(if (done) TurkishBlue else Color.White, CircleShape)
-                                .border(1.5.dp, if (done) TurkishBlue else TurkishBorder, CircleShape),
+                                .background(if (done) color else Color.White, CircleShape)
+                                .border(1.5.dp, if (done) color else TurkishBorder, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             if (done) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
@@ -703,23 +827,10 @@ private fun LessonProgressCard(
                         Text(if (done) "+5 XP" else "", color = TurkishTeal, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                if (sectionsDone >= turkishLessonSections.size - 1) {
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = onCompleteLesson,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = TurkishBlue),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(Icons.Rounded.Check, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("إنهاء الدرس كاملًا")
-                    }
-                }
             } else if (!unlocked) {
                 Spacer(Modifier.height(9.dp))
                 Text(
-                    "أكملي الدرس أو المراجعة السابقة لفتح هذا الدرس.",
+                    "مقفلة لحد ما تكملي الدرس أو المراجعة السابقة.",
                     color = TurkishMuted,
                     fontSize = 10.sp
                 )
@@ -732,39 +843,46 @@ private fun LessonProgressCard(
 private fun ReviewCheckpointCard(
     level: TurkishLevelPlan,
     block: Int,
+    afterLesson: Int,
     unlocked: Boolean,
     isDone: Boolean,
     itemDone: (Int) -> Boolean,
     onToggleItem: (Int, Boolean) -> Unit
 ) {
+    val color = TurkishPink
+
     Card(
         shape = RoundedCornerShape(25.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isDone) TurkishPurple.copy(alpha = .06f) else Color.White
+            containerColor = if (isDone) color.copy(alpha = .06f) else Color.White
         ),
-        border = BorderStroke(1.dp, if (unlocked) TurkishPurple.copy(alpha = .28f) else TurkishBorder)
+        border = BorderStroke(1.dp, if (unlocked) color.copy(alpha = .30f) else TurkishBorder)
     ) {
         Column(Modifier.padding(15.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
                         .size(42.dp)
-                        .background(
-                            if (unlocked) TurkishPurple.copy(alpha = .12f) else Color(0xFFE0E5ED),
-                            RoundedCornerShape(14.dp)
-                        ),
+                        .background(if (unlocked) color.copy(alpha = .12f) else Color(0xFFE0E5ED), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isDone) Icon(Icons.Rounded.Check, null, tint = TurkishPurple)
-                    else if (unlocked) Icon(Icons.Rounded.Stars, null, tint = TurkishPurple)
-                    else Icon(Icons.Rounded.Lock, null, tint = TurkishMuted)
+                    when {
+                        isDone -> Icon(Icons.Rounded.Check, null, tint = color)
+                        unlocked -> Icon(Icons.Rounded.Stars, null, tint = color)
+                        else -> Icon(Icons.Rounded.Lock, null, tint = TurkishMuted)
+                    }
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Checkpoint $block", color = TurkishPurple, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    Text("جلسة مراجعة بعد 6 دروس", color = TurkishNavy, fontWeight = FontWeight.Black)
+                    Text("المراجعة $block", color = color, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("مراجعة بعد الدرس $afterLesson من ${level.id}", color = TurkishNavy, fontWeight = FontWeight.Black)
                 }
-                Text(if (isDone) "مكتملة" else "${(0..2).count { itemDone(it) }}/3", color = TurkishPurple, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (isDone) "مكتملة" else "${turkishReviewItems.indices.count { itemDone(it) }}/${turkishReviewItems.size}",
+                    color = color,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             if (unlocked) {
@@ -781,8 +899,8 @@ private fun ReviewCheckpointCard(
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
-                                .background(if (done) TurkishPurple else Color.White, CircleShape)
-                                .border(1.5.dp, if (done) TurkishPurple else TurkishBorder, CircleShape),
+                                .background(if (done) color else Color.White, CircleShape)
+                                .border(1.5.dp, if (done) color else TurkishBorder, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             if (done) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(14.dp))
@@ -795,7 +913,7 @@ private fun ReviewCheckpointCard(
             } else {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "تفتح بعد إنهاء دروس ${(block - 1) * 6 + 1}–${block * 6} من ${level.id}.",
+                    "تفتح بعد إنهاء كل الدروس حتى رقم $afterLesson.",
                     color = TurkishMuted,
                     fontSize = 10.sp
                 )
@@ -805,7 +923,98 @@ private fun ReviewCheckpointCard(
 }
 
 @Composable
-private fun CourseForecastCard(sprint: TurkishSprint) {
+private fun FinalExamCard(
+    level: TurkishLevelPlan,
+    unlocked: Boolean,
+    completed: Boolean,
+    partsDone: Int,
+    partDone: (Int) -> Boolean,
+    onTogglePart: (Int, Boolean) -> Unit
+) {
+    val color = TurkishPurple
+
+    Card(
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (completed) TurkishGreen.copy(alpha = .07f) else Color.White
+        ),
+        border = BorderStroke(1.5.dp, if (unlocked) color.copy(alpha = .35f) else TurkishBorder)
+    ) {
+        Column(Modifier.padding(17.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            if (completed) TurkishGreen.copy(alpha = .12f)
+                            else if (unlocked) color.copy(alpha = .12f)
+                            else Color(0xFFE0E5ED),
+                            RoundedCornerShape(16.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        completed -> Icon(Icons.Rounded.Check, null, tint = TurkishGreen)
+                        unlocked -> Icon(Icons.Rounded.Flag, null, tint = color)
+                        else -> Icon(Icons.Rounded.Lock, null, tint = TurkishMuted)
+                    }
+                }
+                Spacer(Modifier.width(11.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(level.examTitle, color = TurkishNavy, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        if (completed) "المستوى مكتمل — المستوى التالي صار متاح."
+                        else "4 أجزاء لتأكيد إغلاق المستوى.",
+                        color = TurkishMuted,
+                        fontSize = 10.sp
+                    )
+                }
+                Text("$partsDone/4", color = if (completed) TurkishGreen else color, fontWeight = FontWeight.Black)
+            }
+
+            if (unlocked) {
+                Spacer(Modifier.height(12.dp))
+                turkishExamParts.forEachIndexed { index, part ->
+                    val done = partDone(index)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onTogglePart(index, !done) }
+                            .padding(vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .background(if (done) color else Color.White, CircleShape)
+                                .border(1.5.dp, if (done) color else TurkishBorder, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (done) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(15.dp))
+                        }
+                        Spacer(Modifier.width(9.dp))
+                        Text(part, modifier = Modifier.weight(1f), color = TurkishNavy, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (done) "+25 XP" else "", color = TurkishTeal, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            } else {
+                Spacer(Modifier.height(9.dp))
+                Text(
+                    "الاختبار يفتح بعد إنهاء كل دروس ومراجعات ${level.id}.",
+                    color = TurkishMuted,
+                    fontSize = 10.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CourseForecastCard(
+    store: TurkishJourneyStore,
+    sprint: TurkishSprint,
+    currentLevel: TurkishLevelPlan
+) {
     Card(
         shape = RoundedCornerShape(27.dp),
         colors = CardDefaults.cardColors(containerColor = TurkishNavy)
@@ -816,18 +1025,19 @@ private fun CourseForecastCard(sprint: TurkishSprint) {
                 Spacer(Modifier.width(8.dp))
                 Text("توقع الوصول", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
             }
-            Spacer(Modifier.height(9.dp))
-            if (sprint.remainingCourseLessons == 0) {
-                Text("المسار الكامل A1 → B2 مكتمل.", color = Color.White, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(10.dp))
+
+            if (sprint.remainingCourseLessons == 0 && turkishLevels.all { store.isLevelComplete(it) }) {
+                Text("A1 + A2 + B1 مكتملين بالكامل.", color = Color.White, fontWeight = FontWeight.Bold)
             } else {
                 Text(
-                    "باقي ${sprint.remainingCourseLessons} درس. بسرعة ${sprint.targetLessons} درس بالشهر، تحتاجي تقريبًا ${sprint.estimatedMonthsRemaining} شهر/أشهر لإكمال المسار.",
+                    "باقي ${sprint.remainingCourseLessons} درس/مهارة من أصل 58. بسرعة ${sprint.targetLessons} درس بالشهر، تحتاجي تقريبًا ${sprint.estimatedMonthsRemaining} شهر/أشهر للدروس، إضافة للمراجعات والاختبارات.",
                     color = Color.White.copy(alpha = .82f),
                     fontSize = 12.sp
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "إذا ما خلصتي Sprint هذا الشهر، الدروس غير المكتملة بتدخل تلقائيًا بخطة الشهر التالي قبل الدروس الجديدة.",
+                    "المستوى الحالي: ${currentLevel.id} • باقي ${store.remainingLessonsInLevel(currentLevel)} درس/مهارة.",
                     color = TurkishTeal,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -851,7 +1061,7 @@ private fun SprintTargetDialog(
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "اختاري عدد الدروس اللي بدك تنجزيها هذا الشهر. التقدم العام ما بيتصفّر، وبيكمل للشهر التالي.",
+                    "اختاري عدد الدروس/المهارات اللي بدك تنجزيها خلال الشهر. المسار نفسه مستمر وما بيتصفّر.",
                     color = TurkishMuted,
                     fontSize = 12.sp
                 )
@@ -863,6 +1073,7 @@ private fun SprintTargetDialog(
                         modifier = Modifier.size(44.dp),
                         contentPadding = PaddingValues(0.dp)
                     ) { Icon(Icons.Rounded.Remove, null) }
+
                     Text(
                         "$value",
                         modifier = Modifier.padding(horizontal = 24.dp),
@@ -870,18 +1081,20 @@ private fun SprintTargetDialog(
                         fontSize = 36.sp,
                         fontWeight = FontWeight.Black
                     )
+
                     Button(
-                        onClick = { value = (value + 1).coerceAtMost(36) },
+                        onClick = { value = (value + 1).coerceAtMost(30) },
                         shape = CircleShape,
                         modifier = Modifier.size(44.dp),
                         contentPadding = PaddingValues(0.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = TurkishBlue)
                     ) { Icon(Icons.Rounded.Add, null) }
                 }
-                Text("درس بالشهر", color = TurkishMuted, fontSize = 11.sp)
+
+                Text("درس/مهارة بالشهر", color = TurkishMuted, fontSize = 11.sp)
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "≈ ${kotlin.math.ceil(value / 4.0).toInt()} دروس بالأسبوع • ${value * turkishLessonSections.size} فقرة",
+                    "≈ ${kotlin.math.ceil(value / 4.0).toInt()} بالأسبوع • حتى ${value * 6} فقرة متابعة",
                     color = TurkishPink,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold
@@ -894,6 +1107,24 @@ private fun SprintTargetDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = TurkishBlue)
             ) { Text("اعتماد الخطة") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("إلغاء") }
+        }
     )
+}
+
+private fun lessonBlocks(level: TurkishLevelPlan): List<IntRange> {
+    var start = 1
+    return buildList {
+        level.reviewAfterLessonNumbers.forEach { boundary ->
+            add(start..boundary)
+            start = boundary + 1
+        }
+    }
+}
+
+private fun levelColor(levelId: String): Color = when (levelId) {
+    "A1" -> TurkishBlue
+    "A2" -> TurkishTeal
+    else -> TurkishPurple
 }
