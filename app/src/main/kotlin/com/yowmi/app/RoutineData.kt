@@ -195,6 +195,26 @@ internal class RoutineStore(private val context: Context) {
         return MonthlyProgress(completed, goalTarget(group, month))
     }
 
+    fun groupDayProgress(group: String, date: LocalDate): Pair<Int, Int> {
+        val groupTasks = tasks().filter { it.progressGroup == group && isActive(it, date) }
+        return groupTasks.count { isDone(it, date) } to groupTasks.size
+    }
+
+    fun currentStreak(group: String, today: LocalDate = LocalDate.now()): Int {
+        var streak = 0
+        var date = today
+        repeat(366) {
+            val (done, total) = groupDayProgress(group, date)
+            if (total > 0 && done == total) {
+                streak++
+                date = date.minusDays(1)
+            } else {
+                return streak
+            }
+        }
+        return streak
+    }
+
     private fun saveTasks(items: List<RoutineTask>) {
         val array = JSONArray()
         items.forEach { array.put(taskToJson(it)) }
