@@ -292,14 +292,10 @@ private fun YowmiApp() {
                 today = today,
                 refresh = refresh
             )
-            Screen.Goals -> GoalsScreen(
+            Screen.Goals -> AdvancedGoalsScreen(
                 modifier = Modifier.padding(padding),
-                store = store,
-                month = YearMonth.from(today),
-                refresh = refresh,
                 selectedGoalId = selectedGoalId,
-                onSelectGoal = { selectedGoalId = it },
-                onEditGoal = { goalToEdit = it }
+                onSelectGoal = { selectedGoalId = it }
             )
             Screen.Schedule -> ScheduleScreen(
                 modifier = Modifier.padding(padding),
