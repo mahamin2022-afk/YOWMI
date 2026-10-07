@@ -436,7 +436,7 @@ private fun stageLabels(kind: GoalKind, store: GoalJourneyStore): List<String> =
             "نصف الرحلة — ${total / 2} جزء",
             "ثبات الورد — ${(total * 3) / 4} جزء",
             "الهدف الكامل — $total جزء"
-        ).map { it.replace("$", "$") }
+        )
     }
     GoalKind.TURKISH -> listOf("الأساس والنطق", "الحياة اليومية", "التواصل الحقيقي", "إتقان A1")
     GoalKind.FITNESS -> listOf("تهيئة الجسم", "ثبات الروتين", "رفع القدرة", "شهر مكتمل")
