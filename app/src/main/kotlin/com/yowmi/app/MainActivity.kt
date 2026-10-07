@@ -27,13 +27,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccessTime
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.CalendarMonth
@@ -41,19 +44,26 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CleaningServices
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FitnessCenter
+import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.Spa
+import androidx.compose.material.icons.rounded.Stars
 import androidx.compose.material.icons.rounded.Work
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -61,10 +71,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -82,6 +94,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -109,9 +122,10 @@ private val PronunciationRed = Color(0xFFF43F5E)
 private val PracticeAmber = Color(0xFFFFB000)
 private val WarningRed = Color(0xFFE5484D)
 private val SuccessGreen = Color(0xFF16A66A)
-private val AppBackground = Color(0xFFF6F8FC)
+private val AppBackground = Color(0xFFF5F7FC)
 private val HeroSurface = Color(0xFFEAF0F9)
 private val MutedText = Color(0xFF6E7A90)
+private val SoftBorder = Color(0xFFE5EAF2)
 
 private data class ProgressDefinition(
     val id: String,
@@ -123,10 +137,10 @@ private data class ProgressDefinition(
 )
 
 private val progressDefinitions = listOf(
-    ProgressDefinition("workout", "الرياضة", "استمرارية الشهر", SpeakingOrange, Icons.Rounded.FitnessCenter, "يوم"),
-    ProgressDefinition("quran", "القرآن", "وردك اليومي", VocabularyGreen, Icons.Rounded.AutoStories, "يوم"),
-    ProgressDefinition("turkish", "التركي", "جلستان كل يوم", GrammarBlue, Icons.Rounded.AutoStories, "جلسة"),
-    ProgressDefinition("work", "التطبيق / الشغل", "تقدّم المشروع", MemoryPurple, Icons.Rounded.Work, "يوم")
+    ProgressDefinition("workout", "الرياضة", "استمرارية وحركة", SpeakingOrange, Icons.Rounded.FitnessCenter, "جلسة"),
+    ProgressDefinition("quran", "القرآن", "ورد يومي ثابت", VocabularyGreen, Icons.Rounded.AutoStories, "ورد"),
+    ProgressDefinition("turkish", "التركي", "جلسات التعلم", GrammarBlue, Icons.Rounded.AutoStories, "جلسة"),
+    ProgressDefinition("work", "التطبيق / الشغل", "تقدم المشروع", MemoryPurple, Icons.Rounded.Work, "جلسة")
 )
 
 class MainActivity : ComponentActivity() {
@@ -137,7 +151,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        createAlarmChannel(this)
+        intent.getStringExtra("ack_task_id")?.let { ReminderScheduler.acknowledge(this, it) }
+        createReminderChannels(this)
         requestNotificationPermissionIfNeeded()
         ReminderScheduler.scheduleAll(this)
 
@@ -161,41 +176,50 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        intent.getStringExtra("ack_task_id")?.let { ReminderScheduler.acknowledge(this, it) }
+    }
+
     override fun onResume() {
         super.onResume()
-        createAlarmChannel(this)
+        createReminderChannels(this)
         ReminderScheduler.scheduleAll(this)
     }
 
     private fun requestNotificationPermissionIfNeeded() {
         if (
             Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-            ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) != PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 }
 
-private enum class Screen { Today, Month, Schedule }
+private enum class Screen { Today, Month, Goals, Schedule }
 
 @Composable
 private fun YowmiApp() {
     val context = LocalContext.current
     val store = remember { RoutineStore(context) }
+
     var screen by remember { mutableStateOf(Screen.Today) }
+    var selectedGoalId by remember { mutableStateOf("turkish") }
     var refresh by remember { mutableIntStateOf(0) }
     var today by remember { mutableStateOf(LocalDate.now()) }
+
+    var showTaskEditor by remember { mutableStateOf(false) }
+    var editingTask by remember { mutableStateOf<RoutineTask?>(null) }
+    var deletingTask by remember { mutableStateOf<RoutineTask?>(null) }
+    var goalToEdit by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
             val now = LocalDateTime.now()
             val nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay().plusSeconds(2)
-            val waitMs = Duration.between(now, nextMidnight).toMillis().coerceAtLeast(1_000)
-            delay(waitMs)
+            delay(Duration.between(now, nextMidnight).toMillis().coerceAtLeast(1_000))
             today = LocalDate.now()
             refresh++
             ReminderScheduler.scheduleAll(context)
@@ -204,6 +228,20 @@ private fun YowmiApp() {
 
     Scaffold(
         containerColor = AppBackground,
+        floatingActionButton = {
+            if (screen == Screen.Today || screen == Screen.Schedule) {
+                ExtendedFloatingActionButton(
+                    onClick = {
+                        editingTask = null
+                        showTaskEditor = true
+                    },
+                    containerColor = Navy,
+                    contentColor = Color.White,
+                    icon = { Icon(Icons.Rounded.Add, null) },
+                    text = { Text("مهمة جديدة", fontWeight = FontWeight.Bold) }
+                )
+            }
+        },
         bottomBar = {
             NavigationBar(containerColor = Color.White) {
                 NavigationBarItem(
@@ -217,6 +255,12 @@ private fun YowmiApp() {
                     onClick = { screen = Screen.Month },
                     icon = { Icon(Icons.Rounded.CalendarMonth, null) },
                     label = { Text("الشهر") }
+                )
+                NavigationBarItem(
+                    selected = screen == Screen.Goals,
+                    onClick = { screen = Screen.Goals },
+                    icon = { Icon(Icons.Rounded.Flag, null) },
+                    label = { Text("الأهداف") }
                 )
                 NavigationBarItem(
                     selected = screen == Screen.Schedule,
@@ -236,6 +280,10 @@ private fun YowmiApp() {
                 onChanged = {
                     refresh++
                     ReminderScheduler.scheduleAll(context)
+                },
+                onOpenGoal = {
+                    selectedGoalId = it
+                    screen = Screen.Goals
                 }
             )
             Screen.Month -> MonthScreen(
@@ -244,6 +292,15 @@ private fun YowmiApp() {
                 today = today,
                 refresh = refresh
             )
+            Screen.Goals -> GoalsScreen(
+                modifier = Modifier.padding(padding),
+                store = store,
+                month = YearMonth.from(today),
+                refresh = refresh,
+                selectedGoalId = selectedGoalId,
+                onSelectGoal = { selectedGoalId = it },
+                onEditGoal = { goalToEdit = it }
+            )
             Screen.Schedule -> ScheduleScreen(
                 modifier = Modifier.padding(padding),
                 store = store,
@@ -251,9 +308,66 @@ private fun YowmiApp() {
                 onChanged = {
                     refresh++
                     ReminderScheduler.scheduleAll(context)
-                }
+                },
+                onEditTask = {
+                    editingTask = it
+                    showTaskEditor = true
+                },
+                onDeleteTask = { deletingTask = it }
             )
         }
+    }
+
+    if (showTaskEditor) {
+        TaskEditorDialog(
+            task = editingTask,
+            onDismiss = { showTaskEditor = false },
+            onSave = { task, time ->
+                if (editingTask == null) store.addTask(task) else store.updateTask(task)
+                store.setTime(task, time)
+                showTaskEditor = false
+                refresh++
+                ReminderScheduler.scheduleAll(context)
+            }
+        )
+    }
+
+    deletingTask?.let { task ->
+        AlertDialog(
+            onDismissRequest = { deletingTask = null },
+            title = { Text("حذف المهمة") },
+            text = { Text("حذف «${task.title}» من الجدول؟ سجل الأيام السابقة يبقى محفوظًا.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        ReminderScheduler.cancelTask(context, task.id)
+                        store.deleteTask(task.id)
+                        deletingTask = null
+                        refresh++
+                        ReminderScheduler.scheduleAll(context)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WarningRed)
+                ) { Text("حذف") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingTask = null }) { Text("إلغاء") }
+            }
+        )
+    }
+
+    goalToEdit?.let { goalId ->
+        val definition = progressDefinitions.first { it.id == goalId }
+        val month = YearMonth.from(today)
+        GoalTargetDialog(
+            definition = definition,
+            currentTarget = store.goalTarget(goalId, month),
+            onDismiss = { goalToEdit = null },
+            onSave = { value ->
+                store.setGoalTarget(goalId, month, value)
+                goalToEdit = null
+                refresh++
+            }
+        )
     }
 }
 
@@ -263,7 +377,8 @@ private fun TodayScreen(
     store: RoutineStore,
     date: LocalDate,
     refresh: Int,
-    onChanged: () -> Unit
+    onChanged: () -> Unit,
+    onOpenGoal: (String) -> Unit
 ) {
     val context = LocalContext.current
     val tasks = remember(refresh, date) { store.activeTasks(date) }
@@ -271,52 +386,82 @@ private fun TodayScreen(
     val progress = if (totalCount == 0) 0f else doneCount.toFloat() / totalCount
     val formatter = DateTimeFormatter.ofPattern("EEEE، d MMMM", Locale("ar"))
     val currentMonth = YearMonth.from(date)
+    val now = LocalTime.now()
+    val nextTask = tasks.firstOrNull { !store.isDone(it, date) && store.time(it) >= now }
+        ?: tasks.firstOrNull { !store.isDone(it, date) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(AppBackground),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(13.dp)
     ) {
         item {
             Card(
-                shape = RoundedCornerShape(30.dp),
-                colors = CardDefaults.cardColors(containerColor = HeroSurface)
+                shape = RoundedCornerShape(32.dp),
+                colors = CardDefaults.cardColors(containerColor = Navy)
             ) {
-                Column(Modifier.padding(20.dp)) {
-                    Surface(shape = RoundedCornerShape(50), color = Navy) {
-                        Text(
-                            "برنامج اليوم",
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                    Spacer(Modifier.height(14.dp))
-                    Text("يومي", fontSize = 30.sp, fontWeight = FontWeight.Black, color = Navy)
-                    Text(date.format(formatter), color = MutedText, fontSize = 15.sp)
-                    Spacer(Modifier.height(20.dp))
+                Column(Modifier.padding(21.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
                     ) {
-                        Text("إنجاز اليوم", color = Navy, fontWeight = FontWeight.Bold)
-                        Text("$doneCount / $totalCount", color = Navy, fontWeight = FontWeight.Black)
+                        Column {
+                            Text("يومي", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                            Text(date.format(formatter), color = Color.White.copy(alpha = .72f), fontSize = 14.sp)
+                        }
+                        Surface(shape = CircleShape, color = Teal) {
+                            Text(
+                                "${(progress * 100).toInt()}%",
+                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
+                                color = Color.White,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
                     }
-                    Spacer(Modifier.height(8.dp))
+
+                    Spacer(Modifier.height(20.dp))
                     LinearProgressIndicator(
                         progress = { progress },
-                        modifier = Modifier.fillMaxWidth().height(11.dp).clip(CircleShape),
+                        modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
                         color = Teal,
-                        trackColor = Color.White
+                        trackColor = Color.White.copy(alpha = .16f)
                     )
-                    Spacer(Modifier.height(7.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
-                        "${(progress * 100).toInt()}% مكتمل",
-                        color = Teal,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp
+                        "$doneCount من $totalCount مهمة منجزة",
+                        color = Color.White.copy(alpha = .78f),
+                        fontSize = 12.sp
                     )
+
+                    if (nextTask != null) {
+                        Spacer(Modifier.height(18.dp))
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(22.dp),
+                            color = Color.White.copy(alpha = .10f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(44.dp)
+                                        .background(taskColor(nextTask), RoundedCornerShape(14.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(iconFor(nextTask), null, tint = Color.White)
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("المهمة التالية", color = Color.White.copy(alpha = .65f), fontSize = 11.sp)
+                                    Text(nextTask.title, color = Color.White, fontWeight = FontWeight.Bold)
+                                }
+                                Text(formatTime(store.time(nextTask)), color = Color.White, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -326,15 +471,26 @@ private fun TodayScreen(
         }
 
         item {
-            Text("تطوّرك هذا الشهر", color = Navy, fontWeight = FontWeight.Black, fontSize = 20.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("أهداف هذا الشهر", color = Navy, fontWeight = FontWeight.Black, fontSize = 21.sp)
+                    Text("اضغطي على أي هدف لتشوفي مساره", color = MutedText, fontSize = 12.sp)
+                }
+                Icon(Icons.Rounded.Stars, null, tint = AccentPink)
+            }
         }
 
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(progressDefinitions, key = { it.id }) { definition ->
-                    MonthlyProgressCard(
+                    CompactGoalCard(
                         definition = definition,
-                        progress = store.monthlyProgress(definition.id, currentMonth)
+                        progress = store.monthlyProgress(definition.id, currentMonth),
+                        onClick = { onOpenGoal(definition.id) }
                     )
                 }
             }
@@ -345,22 +501,17 @@ private fun TodayScreen(
             item {
                 Text(
                     section,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
+                    modifier = Modifier.padding(top = 7.dp),
                     color = Navy,
                     fontWeight = FontWeight.Black,
                     fontSize = 18.sp
                 )
             }
-
             items(sectionTasks, key = { it.id }) { task ->
-                val monthlyProgress = task.progressGroup?.let {
-                    store.monthlyProgress(it, currentMonth)
-                }
                 TaskCard(
                     task = task,
                     time = store.time(task),
                     done = store.isDone(task, date),
-                    monthlyProgress = monthlyProgress,
                     onToggle = {
                         store.setDone(task, date, !store.isDone(task, date))
                         onChanged()
@@ -373,13 +524,13 @@ private fun TodayScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(22.dp),
-                color = Color(0xFFEFF9F8)
+                color = Color(0xFFE7F7F5)
             ) {
                 Text(
-                    "عند الساعة 12:00 ليلًا ينتقل التطبيق تلقائيًا لليوم الجديد. إنجاز الأيام السابقة يبقى محفوظًا داخل التقويم.",
+                    "بعد 12:00 ليلًا يبدأ يوم جديد تلقائيًا. الأيام السابقة تبقى محفوظة بالتقويم، والمهام غير المنجزة لا تنتقل كأنها منجزة.",
                     modifier = Modifier.padding(16.dp),
                     color = Navy,
-                    fontSize = 13.sp
+                    fontSize = 12.sp
                 )
             }
         }
@@ -387,91 +538,47 @@ private fun TodayScreen(
 }
 
 @Composable
-private fun PermissionWarningCard(context: Context) {
-    val notificationOk = hasNotificationPermission(context)
-    val exactOk = hasExactAlarmPermission(context)
-
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF2E5)),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, SpeakingOrange.copy(alpha = 0.30f))
-    ) {
-        Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Alarm, null, tint = SpeakingOrange)
-                Spacer(Modifier.size(8.dp))
-                Text("التنبيه بحاجة لتفعيل", color = Navy, fontWeight = FontWeight.Black)
-            }
-            Spacer(Modifier.height(8.dp))
-            Text(
-                if (!notificationOk) "فعّلي إذن الإشعارات حتى يقدر التطبيق يرن ويعرض التنبيه."
-                else "فعّلي المنبّهات الدقيقة حتى يوصل التنبيه بنفس الساعة المحددة.",
-                color = MutedText,
-                fontSize = 13.sp
-            )
-            Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = {
-                    if (!notificationOk) openNotificationSettings(context)
-                    else openExactAlarmSettings(context)
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = SpeakingOrange),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Text("تفعيل الآن")
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthlyProgressCard(
+private fun CompactGoalCard(
     definition: ProgressDefinition,
-    progress: MonthlyProgress
+    progress: MonthlyProgress,
+    onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier.size(width = 205.dp, height = 150.dp),
+        modifier = Modifier
+            .width(220.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(26.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, definition.color.copy(alpha = 0.18f))
+        border = BorderStroke(1.dp, definition.color.copy(alpha = .20f))
     ) {
-        Column(
-            modifier = Modifier.padding(15.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .background(definition.color.copy(alpha = 0.12f), RoundedCornerShape(12.dp)),
+                        .size(42.dp)
+                        .background(definition.color.copy(alpha = .12f), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(definition.icon, null, tint = definition.color, modifier = Modifier.size(21.dp))
+                    Icon(definition.icon, null, tint = definition.color)
                 }
-                Spacer(Modifier.size(9.dp))
-                Column {
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
                     Text(definition.title, color = Navy, fontWeight = FontWeight.Black)
-                    Text(definition.subtitle, color = MutedText, fontSize = 11.sp)
+                    Text(progress.stage, color = definition.color, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
+                Text("${(progress.ratio * 100).toInt()}%", color = Navy, fontWeight = FontWeight.Black)
             }
             LinearProgressIndicator(
                 progress = { progress.ratio },
                 modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
                 color = definition.color,
-                trackColor = definition.color.copy(alpha = 0.12f)
+                trackColor = definition.color.copy(alpha = .12f)
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(progress.stage, color = definition.color, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    "${progress.completed}/${progress.target} ${definition.unit}",
-                    color = Navy,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+            Text(
+                "${progress.completed} / ${progress.target} ${definition.unit}",
+                color = MutedText,
+                fontSize = 11.sp
+            )
         }
     }
 }
@@ -481,91 +588,310 @@ private fun TaskCard(
     task: RoutineTask,
     time: LocalTime,
     done: Boolean,
-    monthlyProgress: MonthlyProgress?,
     onToggle: () -> Unit
 ) {
     val color = taskColor(task)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(25.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (done) color.copy(alpha = 0.08f) else Color.White
+            containerColor = if (done) color.copy(alpha = .07f) else Color.White
         ),
-        border = BorderStroke(1.dp, if (done) color.copy(alpha = 0.28f) else Color(0xFFE5EAF2))
+        border = BorderStroke(1.dp, if (done) color.copy(alpha = .30f) else SoftBorder)
     ) {
-        Column(Modifier.padding(15.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(15.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(color.copy(alpha = .12f), RoundedCornerShape(15.dp)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .background(color.copy(alpha = 0.12f), RoundedCornerShape(15.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(iconFor(task), null, tint = color)
-                }
-
-                Column(Modifier.weight(1f)) {
-                    Text(task.title, color = Navy, fontWeight = FontWeight.Black)
+                Icon(iconFor(task), null, tint = color)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(task.title, color = Navy, fontWeight = FontWeight.Black)
+                if (task.subtitle.isNotBlank()) {
                     Text(task.subtitle, color = MutedText, fontSize = 12.sp)
-                    Spacer(Modifier.height(5.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.AccessTime, null, tint = color, modifier = Modifier.size(15.dp))
-                        Spacer(Modifier.size(4.dp))
-                        Text(formatTime(time), color = Navy, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    }
                 }
-
-                Button(
-                    onClick = onToggle,
-                    shape = RoundedCornerShape(18.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (done) SuccessGreen else color
-                    ),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
-                ) {
-                    if (done) {
-                        Icon(Icons.Rounded.Check, null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.size(4.dp))
-                    }
-                    Text(if (done) "تم" else "تم ✓")
+                Spacer(Modifier.height(5.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.AccessTime, null, tint = color, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(formatTime(time), color = Navy, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
+            Button(
+                onClick = onToggle,
+                colors = ButtonDefaults.buttonColors(containerColor = if (done) SuccessGreen else color),
+                shape = RoundedCornerShape(18.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                if (done) {
+                    Icon(Icons.Rounded.Check, null, modifier = Modifier.size(17.dp))
+                    Spacer(Modifier.width(4.dp))
+                }
+                Text(if (done) "تم" else "تم ✓")
+            }
+        }
+    }
+}
 
-            if (monthlyProgress != null) {
-                Spacer(Modifier.height(12.dp))
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    color = color.copy(alpha = 0.07f)
-                ) {
-                    Column(Modifier.padding(horizontal = 12.dp, vertical = 9.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+@Composable
+private fun GoalsScreen(
+    modifier: Modifier,
+    store: RoutineStore,
+    month: YearMonth,
+    refresh: Int,
+    selectedGoalId: String,
+    onSelectGoal: (String) -> Unit,
+    onEditGoal: (String) -> Unit
+) {
+    val definition = progressDefinitions.firstOrNull { it.id == selectedGoalId } ?: progressDefinitions.first()
+    val progress = remember(refresh, selectedGoalId, month) { store.monthlyProgress(definition.id, month) }
+    val streak = remember(refresh, selectedGoalId) { store.currentStreak(definition.id) }
+    val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale("ar"))
+    val last7 = (6 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize().background(AppBackground),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 90.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        item {
+            Text("أهدافي", color = Navy, fontSize = 30.sp, fontWeight = FontWeight.Black)
+            Text(month.atDay(1).format(monthFormatter), color = MutedText, fontSize = 13.sp)
+        }
+
+        item {
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                items(progressDefinitions, key = { it.id }) { item ->
+                    FilterChip(
+                        selected = item.id == definition.id,
+                        onClick = { onSelectGoal(item.id) },
+                        label = { Text(item.title) },
+                        leadingIcon = { Icon(item.icon, null, modifier = Modifier.size(17.dp)) }
+                    )
+                }
+            }
+        }
+
+        item {
+            Card(
+                shape = RoundedCornerShape(32.dp),
+                colors = CardDefaults.cardColors(containerColor = definition.color)
+            ) {
+                Column(Modifier.padding(21.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .background(Color.White.copy(alpha = .16f), RoundedCornerShape(18.dp)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(monthlyProgress.stage, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text(
-                                "${monthlyProgress.completed}/${monthlyProgress.target}",
-                                color = Navy,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
+                            Icon(definition.icon, null, tint = Color.White, modifier = Modifier.size(29.dp))
                         }
-                        Spacer(Modifier.height(6.dp))
-                        LinearProgressIndicator(
-                            progress = { monthlyProgress.ratio },
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                            color = color,
-                            trackColor = color.copy(alpha = 0.14f)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(definition.title, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                            Text(progress.stage, color = Color.White.copy(alpha = .76f), fontSize = 12.sp)
+                        }
+                        Text(
+                            "${(progress.ratio * 100).toInt()}%",
+                            color = Color.White,
+                            fontSize = 25.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+
+                    Spacer(Modifier.height(22.dp))
+                    LinearProgressIndicator(
+                        progress = { progress.ratio },
+                        modifier = Modifier.fillMaxWidth().height(12.dp).clip(CircleShape),
+                        color = Color.White,
+                        trackColor = Color.White.copy(alpha = .20f)
+                    )
+                    Spacer(Modifier.height(9.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("${progress.completed} من ${progress.target} ${definition.unit}", color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("المحطة التالية ${progress.nextMilestone}%", color = Color.White.copy(alpha = .80f), fontSize = 12.sp)
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+                    Button(
+                        onClick = { onEditGoal(definition.id) },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.White,
+                            contentColor = definition.color
+                        ),
+                        shape = RoundedCornerShape(18.dp)
+                    ) {
+                        Icon(Icons.Rounded.Edit, null)
+                        Spacer(Modifier.width(7.dp))
+                        Text("تعديل هدفي لهذا الشهر", fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
+
+        item {
+            Text("طريق الهدف", color = Navy, fontSize = 20.sp, fontWeight = FontWeight.Black)
+        }
+
+        item {
+            MilestoneRoadmap(progress = progress, color = definition.color)
+        }
+
+        item {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    title = "السلسلة الحالية",
+                    value = "$streak يوم",
+                    accent = Teal
+                )
+                MetricCard(
+                    modifier = Modifier.weight(1f),
+                    title = "المتبقي",
+                    value = "${(progress.target - progress.completed).coerceAtLeast(0)} ${definition.unit}",
+                    accent = AccentPink
+                )
+            }
+        }
+
+        item {
+            Text("آخر 7 أيام", color = Navy, fontSize = 20.sp, fontWeight = FontWeight.Black)
+        }
+
+        item {
+            Card(
+                shape = RoundedCornerShape(26.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(15.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    last7.forEach { date ->
+                        val (done, total) = store.groupDayProgress(definition.id, date)
+                        val complete = total > 0 && done == total
+                        val partial = done > 0 && !complete
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale("ar")),
+                                color = MutedText,
+                                fontSize = 10.sp
+                            )
+                            Spacer(Modifier.height(7.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .background(
+                                        when {
+                                            complete -> definition.color
+                                            partial -> definition.color.copy(alpha = .22f)
+                                            else -> Color(0xFFF0F2F7)
+                                        },
+                                        CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (complete) {
+                                    Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                } else {
+                                    Text("${date.dayOfMonth}", color = Navy, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MilestoneRoadmap(progress: MonthlyProgress, color: Color) {
+    Card(
+        shape = RoundedCornerShape(27.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(Modifier.padding(17.dp)) {
+            val milestones = listOf(25, 50, 75, 100)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                milestones.forEachIndexed { index, milestone ->
+                    val reached = progress.ratio * 100 >= milestone
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .background(if (reached) color else Color(0xFFF0F2F7), CircleShape)
+                            .border(
+                                2.dp,
+                                if (reached) color else Color(0xFFDCE2EB),
+                                CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (reached) {
+                            Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        } else {
+                            Text("$milestone", color = MutedText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    if (index < milestones.lastIndex) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(4.dp)
+                                .background(
+                                    if (progress.ratio * 100 >= milestones[index + 1]) color
+                                    else Color(0xFFE8ECF3),
+                                    CircleShape
+                                )
                         )
                     }
                 }
             }
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                listOf("انطلاقة", "استمرار", "تقدّم", "وصول").forEach {
+                    Text(it, color = MutedText, fontSize = 10.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetricCard(modifier: Modifier, title: String, value: String, accent: Color) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, accent.copy(alpha = .18f))
+    ) {
+        Column(Modifier.padding(15.dp)) {
+            Text(title, color = MutedText, fontSize = 11.sp)
+            Spacer(Modifier.height(5.dp))
+            Text(value, color = Navy, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(8.dp))
+            Box(
+                Modifier
+                    .width(34.dp)
+                    .height(5.dp)
+                    .background(accent, CircleShape)
+            )
         }
     }
 }
@@ -579,53 +905,43 @@ private fun MonthScreen(
 ) {
     var month by remember { mutableStateOf(YearMonth.from(today)) }
     var selectedDate by remember { mutableStateOf(today) }
-
     val monthFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale("ar"))
     val cells = remember(month) { calendarCells(month) }
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(AppBackground),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 90.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("تقويم الشهر", color = Navy, fontSize = 28.sp, fontWeight = FontWeight.Black)
-            Text("كل يوم يحتفظ بإنجازه بشكل مستقل", color = MutedText, fontSize = 13.sp)
+            Text("تقويم الشهر", color = Navy, fontSize = 29.sp, fontWeight = FontWeight.Black)
+            Text("سجل يومي واضح، وما بينمسح لما يبدأ يوم جديد", color = MutedText, fontSize = 12.sp)
         }
 
         item {
-            Card(
-                shape = RoundedCornerShape(28.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
+            Card(shape = RoundedCornerShape(30.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.padding(14.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        IconButton(
-                            onClick = {
-                                month = month.minusMonths(1)
-                                selectedDate = month.atDay(1)
-                            }
-                        ) {
-                            Icon(Icons.Rounded.ChevronRight, "الشهر السابق", tint = Navy)
-                        }
+                        IconButton(onClick = {
+                            month = month.minusMonths(1)
+                            selectedDate = month.atDay(1)
+                        }) { Icon(Icons.Rounded.ChevronRight, "الشهر السابق", tint = Navy) }
+
                         Text(
                             month.atDay(1).format(monthFormatter),
                             color = Navy,
                             fontWeight = FontWeight.Black,
                             fontSize = 18.sp
                         )
-                        IconButton(
-                            onClick = {
-                                month = month.plusMonths(1)
-                                selectedDate = month.atDay(1)
-                            }
-                        ) {
-                            Icon(Icons.Rounded.ChevronLeft, "الشهر التالي", tint = Navy)
-                        }
+
+                        IconButton(onClick = {
+                            month = month.plusMonths(1)
+                            selectedDate = month.atDay(1)
+                        }) { Icon(Icons.Rounded.ChevronLeft, "الشهر التالي", tint = Navy) }
                     }
 
                     Row(Modifier.fillMaxWidth()) {
@@ -652,9 +968,7 @@ private fun MonthScreen(
                                     today = date == today,
                                     store = store,
                                     refresh = refresh,
-                                    onClick = {
-                                        if (date != null) selectedDate = date
-                                    }
+                                    onClick = { if (date != null) selectedDate = date }
                                 )
                             }
                         }
@@ -663,9 +977,7 @@ private fun MonthScreen(
             }
         }
 
-        item {
-            SelectedDaySummary(store = store, date = selectedDate, today = today)
-        }
+        item { SelectedDaySummary(store = store, date = selectedDate, today = today) }
     }
 }
 
@@ -683,29 +995,26 @@ private fun CalendarCell(
         Spacer(modifier = modifier.height(66.dp))
         return
     }
-
     val (done, total) = remember(refresh, date) { store.dailyProgress(date) }
     val ratio = if (total == 0) 0f else done.toFloat() / total
     val isFuture = date.isAfter(LocalDate.now())
-    val container = when {
-        selected -> Navy
-        ratio >= 1f -> SuccessGreen.copy(alpha = 0.12f)
-        ratio > 0f -> PracticeAmber.copy(alpha = 0.12f)
-        else -> Color.Transparent
-    }
 
     Column(
         modifier = modifier
             .padding(2.dp)
             .height(66.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(container)
-            .then(
-                if (today && !selected) Modifier.border(1.5.dp, Teal, RoundedCornerShape(16.dp))
-                else Modifier
+            .background(
+                when {
+                    selected -> Navy
+                    ratio >= 1f -> SuccessGreen.copy(alpha = .11f)
+                    ratio > 0f -> PracticeAmber.copy(alpha = .11f)
+                    else -> Color.Transparent
+                }
             )
+            .then(if (today && !selected) Modifier.border(1.5.dp, Teal, RoundedCornerShape(16.dp)) else Modifier)
             .clickable(onClick = onClick)
-            .padding(6.dp),
+            .padding(5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -729,10 +1038,10 @@ private fun CalendarCell(
                         CircleShape
                     )
             )
-            if (ratio > 0f && total > 0) {
+            if (ratio > 0f) {
                 Text(
                     "${(ratio * 100).toInt()}%",
-                    color = if (selected) Color.White.copy(alpha = 0.85f) else MutedText,
+                    color = if (selected) Color.White.copy(alpha = .8f) else MutedText,
                     fontSize = 8.sp
                 )
             }
@@ -741,20 +1050,13 @@ private fun CalendarCell(
 }
 
 @Composable
-private fun SelectedDaySummary(
-    store: RoutineStore,
-    date: LocalDate,
-    today: LocalDate
-) {
+private fun SelectedDaySummary(store: RoutineStore, date: LocalDate, today: LocalDate) {
     val tasks = store.activeTasks(date)
     val (done, total) = store.dailyProgress(date)
     val ratio = if (total == 0) 0f else done.toFloat() / total
     val formatter = DateTimeFormatter.ofPattern("EEEE، d MMMM", Locale("ar"))
 
-    Card(
-        shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
+    Card(shape = RoundedCornerShape(27.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
         Column(Modifier.padding(16.dp)) {
             Text(date.format(formatter), color = Navy, fontWeight = FontWeight.Black, fontSize = 18.sp)
             Text(
@@ -764,38 +1066,31 @@ private fun SelectedDaySummary(
                     else -> "$done من $total مهمة"
                 },
                 color = if (ratio >= 1f) SuccessGreen else MutedText,
-                fontSize = 13.sp
+                fontSize = 12.sp
             )
-
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(11.dp))
             LinearProgressIndicator(
                 progress = { ratio },
                 modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
                 color = if (ratio >= 1f) SuccessGreen else GrammarBlue,
                 trackColor = Color(0xFFE9EDF4)
             )
-            Spacer(Modifier.height(12.dp))
-
+            Spacer(Modifier.height(11.dp))
             tasks.forEach { task ->
                 val checked = store.isDone(task, date)
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
                             .size(26.dp)
-                            .background(
-                                if (checked) SuccessGreen else Color(0xFFE9EDF4),
-                                CircleShape
-                            ),
+                            .background(if (checked) SuccessGreen else Color(0xFFE9EDF4), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (checked) {
-                            Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                        }
+                        if (checked) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     }
-                    Spacer(Modifier.size(9.dp))
+                    Spacer(Modifier.width(9.dp))
                     Text(task.title, color = Navy, fontSize = 13.sp, modifier = Modifier.weight(1f))
                     Text(formatTime(store.time(task)), color = MutedText, fontSize = 11.sp)
                 }
@@ -809,157 +1104,111 @@ private fun ScheduleScreen(
     modifier: Modifier,
     store: RoutineStore,
     refresh: Int,
-    onChanged: () -> Unit
+    onChanged: () -> Unit,
+    onEditTask: (RoutineTask) -> Unit,
+    onDeleteTask: (RoutineTask) -> Unit
 ) {
     val context = LocalContext.current
+    val tasks = remember(refresh) { store.tasks().sortedBy { store.time(it) } }
     val notificationsEnabled = remember(refresh) { store.notificationsEnabled() }
     val notificationPermission = hasNotificationPermission(context)
     val exactPermission = hasExactAlarmPermission(context)
 
     LazyColumn(
         modifier = modifier.fillMaxSize().background(AppBackground),
-        contentPadding = PaddingValues(16.dp),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 110.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            Text("الجدول والتنبيهات", color = Navy, fontSize = 28.sp, fontWeight = FontWeight.Black)
-            Text("غيّري أي ساعة واضبطي صلاحيات المنبّه من هون", color = MutedText, fontSize = 13.sp)
+            Text("جدولي", color = Navy, fontSize = 29.sp, fontWeight = FontWeight.Black)
+            Text("أضيفي، عدّلي أو احذفي أي مهمة — البرنامج صار مرن بالكامل", color = MutedText, fontSize = 12.sp)
         }
 
         item {
-            Card(
-                shape = RoundedCornerShape(26.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
+            Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(Modifier.padding(16.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(44.dp)
-                                .background(AccentPink.copy(alpha = 0.12f), RoundedCornerShape(14.dp)),
+                                .size(46.dp)
+                                .background(AccentPink.copy(alpha = .12f), RoundedCornerShape(15.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Rounded.Notifications, null, tint = AccentPink)
                         }
-                        Spacer(Modifier.size(10.dp))
+                        Spacer(Modifier.width(11.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("التنبيهات اليومية", color = Navy, fontWeight = FontWeight.Black)
-                            Text("صوت منبّه + اهتزاز + إشعار", color = MutedText, fontSize = 12.sp)
+                            Text("نظام التذكير الذكي", color = Navy, fontWeight = FontWeight.Black)
+                            Text("موسيقا لطيفة أولًا، وبعد 3 دقائق منبّه إذا ما انتبهتي", color = MutedText, fontSize = 11.sp)
                         }
                         Switch(
                             checked = notificationsEnabled,
                             onCheckedChange = {
                                 store.setNotificationsEnabled(it)
-                                if (it) ReminderScheduler.scheduleAll(context)
-                                else ReminderScheduler.cancelAll(context)
+                                if (it) ReminderScheduler.scheduleAll(context) else ReminderScheduler.cancelAll(context)
                                 onChanged()
                             }
                         )
                     }
 
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(13.dp))
                     PermissionStatusRow(
                         title = "إذن الإشعارات",
                         ok = notificationPermission,
                         actionLabel = if (notificationPermission) "مفعّل" else "فتح الإعدادات",
-                        onAction = {
-                            if (!notificationPermission) openNotificationSettings(context)
-                        }
+                        onAction = { if (!notificationPermission) openNotificationSettings(context) }
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(7.dp))
                     PermissionStatusRow(
-                        title = "المنبّهات الدقيقة",
+                        title = "التنبيهات الدقيقة",
                         ok = exactPermission,
                         actionLabel = if (exactPermission) "مفعّل" else "تفعيل",
-                        onAction = {
-                            if (!exactPermission) openExactAlarmSettings(context)
-                        }
+                        onAction = { if (!exactPermission) openExactAlarmSettings(context) }
                     )
 
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(13.dp))
                     Button(
                         onClick = {
                             if (!notificationPermission) openNotificationSettings(context)
-                            else ReminderScheduler.sendTestAlarm(context)
+                            else ReminderScheduler.sendTestReminder(context)
                         },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = AccentPink),
                         shape = RoundedCornerShape(18.dp)
                     ) {
                         Icon(Icons.Rounded.Alarm, null)
-                        Spacer(Modifier.size(7.dp))
-                        Text("اختبار التنبيه الآن")
+                        Spacer(Modifier.width(7.dp))
+                        Text("جرّبي التذكير اللطيف الآن", fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFDDF7F5)
-            ) {
-                Text(
-                    "التطبيق ينتقل تلقائيًا لليوم الجديد بعد 12:00 ليلًا، ويعيد جدولة تنبيهات اليوم التالي حتى بعد إعادة تشغيل الموبايل.",
-                    modifier = Modifier.padding(15.dp),
-                    color = Navy,
-                    fontSize = 13.sp
-                )
-            }
+            Text("المهام المتكررة", color = Navy, fontSize = 20.sp, fontWeight = FontWeight.Black)
         }
 
-        item {
-            Text("أوقات المهام", color = Navy, fontWeight = FontWeight.Black, fontSize = 20.sp)
-        }
-
-        items(routineTasks, key = { it.id }) { task ->
-            val currentTime = store.time(task)
-            val color = taskColor(task)
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .background(color.copy(alpha = 0.12f), RoundedCornerShape(13.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(iconFor(task), null, tint = color, modifier = Modifier.size(21.dp))
-                    }
-                    Spacer(Modifier.size(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(task.title, color = Navy, fontWeight = FontWeight.Bold)
-                        Text(store.repeatLabel(task), color = MutedText, fontSize = 11.sp)
-                    }
-                    Button(
-                        onClick = {
-                            TimePickerDialog(
-                                context,
-                                { _, hour, minute ->
-                                    store.setTime(task, LocalTime.of(hour, minute))
-                                    onChanged()
-                                },
-                                currentTime.hour,
-                                currentTime.minute,
-                                true
-                            ).show()
+        items(tasks, key = { it.id }) { task ->
+            EditableTaskRow(
+                task = task,
+                time = store.time(task),
+                repeatLabel = store.repeatLabel(task),
+                onTimeClick = {
+                    val current = store.time(task)
+                    TimePickerDialog(
+                        context,
+                        { _, hour, minute ->
+                            store.setTime(task, LocalTime.of(hour, minute))
+                            onChanged()
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = color),
-                        shape = RoundedCornerShape(16.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 9.dp)
-                    ) {
-                        Text(formatTime(currentTime), fontSize = 12.sp)
-                    }
-                }
-            }
+                        current.hour,
+                        current.minute,
+                        true
+                    ).show()
+                },
+                onEdit = { onEditTask(task) },
+                onDelete = { onDeleteTask(task) }
+            )
         }
 
         item {
@@ -973,24 +1222,289 @@ private fun ScheduleScreen(
                 shape = RoundedCornerShape(18.dp)
             ) {
                 Icon(Icons.Rounded.CleaningServices, null, tint = Teal)
-                Spacer(Modifier.size(7.dp))
+                Spacer(Modifier.width(7.dp))
                 Text("اعتبري اليوم يوم تنظيف", color = Teal)
             }
         }
+    }
+}
 
-        item {
-            Surface(
+@Composable
+private fun EditableTaskRow(
+    task: RoutineTask,
+    time: LocalTime,
+    repeatLabel: String,
+    onTimeClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val color = taskColor(task)
+    Card(
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, SoftBorder)
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(45.dp)
+                        .background(color.copy(alpha = .12f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) { Icon(iconFor(task), null, tint = color) }
+
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(task.title, color = Navy, fontWeight = FontWeight.Black)
+                    Text(repeatLabel, color = MutedText, fontSize = 11.sp)
+                }
+
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Rounded.Edit, "تعديل", tint = Navy)
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Rounded.Delete, "حذف", tint = WarningRed)
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onTimeClick,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = HeroSurface
+                shape = RoundedCornerShape(15.dp),
+                border = BorderStroke(1.dp, color.copy(alpha = .35f))
             ) {
+                Icon(Icons.Rounded.AccessTime, null, tint = color, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(5.dp))
+                Text(formatTime(time), color = Navy, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TaskEditorDialog(
+    task: RoutineTask?,
+    onDismiss: () -> Unit,
+    onSave: (RoutineTask, LocalTime) -> Unit
+) {
+    val context = LocalContext.current
+    var title by remember(task?.id) { mutableStateOf(task?.title.orEmpty()) }
+    var subtitle by remember(task?.id) { mutableStateOf(task?.subtitle.orEmpty()) }
+    var time by remember(task?.id) { mutableStateOf(task?.defaultTime ?: LocalTime.of(12, 0)) }
+    var section by remember(task?.id) { mutableStateOf(task?.section ?: "الظهر") }
+    var repeatType by remember(task?.id) {
+        mutableStateOf(
+            when (task?.repeatRule) {
+                RepeatRule.AlternateDays -> "alternate"
+                is RepeatRule.Weekly -> "weekly"
+                else -> "daily"
+            }
+        )
+    }
+    var weeklyDays by remember(task?.id) {
+        mutableStateOf(
+            (task?.repeatRule as? RepeatRule.Weekly)?.days ?: setOf(DayOfWeek.MONDAY)
+        )
+    }
+    var progressGroup by remember(task?.id) { mutableStateOf(task?.progressGroup) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (task == null) "مهمة جديدة" else "تعديل المهمة", color = Navy, fontWeight = FontWeight.Black) },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                item {
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("اسم المهمة") },
+                        singleLine = true
+                    )
+                }
+                item {
+                    OutlinedTextField(
+                        value = subtitle,
+                        onValueChange = { subtitle = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("ملاحظة قصيرة — اختياري") },
+                        maxLines = 2
+                    )
+                }
+                item {
+                    OutlinedButton(
+                        onClick = {
+                            TimePickerDialog(
+                                context,
+                                { _, hour, minute -> time = LocalTime.of(hour, minute) },
+                                time.hour,
+                                time.minute,
+                                true
+                            ).show()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Rounded.AccessTime, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(formatTime(time))
+                    }
+                }
+                item {
+                    Text("فترة اليوم", color = Navy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        items(listOf("الصباح", "الظهر", "المساء", "قبل النوم", "قبل الفجر")) { item ->
+                            FilterChip(
+                                selected = section == item,
+                                onClick = { section = item },
+                                label = { Text(item) }
+                            )
+                        }
+                    }
+                }
+                item {
+                    Text("التكرار", color = Navy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        FilterChip(selected = repeatType == "daily", onClick = { repeatType = "daily" }, label = { Text("يومي") })
+                        FilterChip(selected = repeatType == "alternate", onClick = { repeatType = "alternate" }, label = { Text("يوم إيه/لا") })
+                        FilterChip(selected = repeatType == "weekly", onClick = { repeatType = "weekly" }, label = { Text("أيام محددة") })
+                    }
+                }
+                if (repeatType == "weekly") {
+                    item {
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            items(DayOfWeek.entries) { day ->
+                                FilterChip(
+                                    selected = day in weeklyDays,
+                                    onClick = {
+                                        weeklyDays = if (day in weeklyDays) weeklyDays - day else weeklyDays + day
+                                    },
+                                    label = { Text(shortArabicDay(day)) }
+                                )
+                            }
+                        }
+                    }
+                }
+                item {
+                    Text("هل تدخل ضمن هدف؟", color = Navy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item {
+                            FilterChip(
+                                selected = progressGroup == null,
+                                onClick = { progressGroup = null },
+                                label = { Text("بدون هدف") }
+                            )
+                        }
+                        items(progressDefinitions) { goal ->
+                            FilterChip(
+                                selected = progressGroup == goal.id,
+                                onClick = { progressGroup = goal.id },
+                                label = { Text(goal.title) }
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (title.isBlank()) return@Button
+                    val rule = when (repeatType) {
+                        "alternate" -> RepeatRule.AlternateDays
+                        "weekly" -> RepeatRule.Weekly(weeklyDays.ifEmpty { setOf(DayOfWeek.MONDAY) })
+                        else -> RepeatRule.Daily
+                    }
+                    onSave(
+                        RoutineTask(
+                            id = task?.id ?: "custom_${System.currentTimeMillis()}",
+                            title = title.trim(),
+                            subtitle = subtitle.trim(),
+                            defaultTime = time,
+                            section = section,
+                            repeatRule = rule,
+                            progressGroup = progressGroup,
+                            isCustom = task?.isCustom ?: true
+                        ),
+                        time
+                    )
+                },
+                enabled = title.isNotBlank()
+            ) { Text("حفظ") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } }
+    )
+}
+
+@Composable
+private fun GoalTargetDialog(
+    definition: ProgressDefinition,
+    currentTarget: Int,
+    onDismiss: () -> Unit,
+    onSave: (Int) -> Unit
+) {
+    var value by remember(definition.id) { mutableStateOf(currentTarget.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("هدف ${definition.title}", color = Navy, fontWeight = FontWeight.Black) },
+        text = {
+            Column {
                 Text(
-                    "وقت التهجد مضبوط افتراضيًا على 4:30 صباحًا. عدّليه حسب وقت الفجر عندك.",
-                    modifier = Modifier.padding(16.dp),
-                    color = Navy,
-                    fontSize = 13.sp
+                    "حددي الرقم اللي بدك توصليله خلال الشهر. كل مرة تعملي «تم» لمهمة مرتبطة بهذا الهدف بتنحسب خطوة.",
+                    color = MutedText,
+                    fontSize = 12.sp
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { value = it.filter(Char::isDigit).take(4) },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("الهدف الشهري (${definition.unit})") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
                 )
             }
+        },
+        confirmButton = {
+            Button(
+                onClick = { value.toIntOrNull()?.takeIf { it > 0 }?.let(onSave) },
+                enabled = (value.toIntOrNull() ?: 0) > 0
+            ) { Text("اعتماد الهدف") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } }
+    )
+}
+
+@Composable
+private fun PermissionWarningCard(context: Context) {
+    val notificationOk = hasNotificationPermission(context)
+    val exactOk = hasExactAlarmPermission(context)
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF2E5)),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, SpeakingOrange.copy(alpha = .30f))
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Alarm, null, tint = SpeakingOrange)
+                Spacer(Modifier.width(8.dp))
+                Text("فعّلي التنبيهات الكاملة", color = Navy, fontWeight = FontWeight.Black)
+            }
+            Spacer(Modifier.height(7.dp))
+            Text(
+                if (!notificationOk) "إذن الإشعارات مطفأ، لذلك التطبيق ما بيقدر يعرض تذكيراته."
+                else "فعّلي التنبيهات الدقيقة حتى التذكير يوصل بنفس الساعة المحددة.",
+                color = MutedText,
+                fontSize = 12.sp
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = {
+                    if (!notificationOk) openNotificationSettings(context) else openExactAlarmSettings(context)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = SpeakingOrange),
+                shape = RoundedCornerShape(16.dp)
+            ) { Text("تفعيل الآن") }
         }
     }
 }
@@ -1002,16 +1516,9 @@ private fun PermissionStatusRow(
     actionLabel: String,
     onAction: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .background(if (ok) SuccessGreen else WarningRed, CircleShape)
-        )
-        Spacer(Modifier.size(8.dp))
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(10.dp).background(if (ok) SuccessGreen else WarningRed, CircleShape))
+        Spacer(Modifier.width(8.dp))
         Text(title, modifier = Modifier.weight(1f), color = Navy, fontSize = 13.sp)
         if (ok) {
             Text(actionLabel, color = SuccessGreen, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -1020,17 +1527,14 @@ private fun PermissionStatusRow(
                 onClick = onAction,
                 shape = RoundedCornerShape(14.dp),
                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-            ) {
-                Text(actionLabel, fontSize = 11.sp)
-            }
+            ) { Text(actionLabel, fontSize = 11.sp) }
         }
     }
 }
 
 private fun calendarCells(month: YearMonth): List<LocalDate?> {
     val first = month.atDay(1)
-    val saturdayValue = DayOfWeek.SATURDAY.value
-    val offset = (first.dayOfWeek.value - saturdayValue + 7) % 7
+    val offset = (first.dayOfWeek.value - DayOfWeek.SATURDAY.value + 7) % 7
     return List(42) { index ->
         val day = index - offset + 1
         if (day in 1..month.lengthOfMonth()) month.atDay(day) else null
@@ -1038,10 +1542,11 @@ private fun calendarCells(month: YearMonth): List<LocalDate?> {
 }
 
 private fun openNotificationSettings(context: Context) {
-    val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-    }
-    context.startActivity(intent)
+    context.startActivity(
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        }
+    )
 }
 
 private fun openExactAlarmSettings(context: Context) {
@@ -1062,35 +1567,44 @@ private fun openExactAlarmSettings(context: Context) {
     }
 }
 
+private fun shortArabicDay(day: DayOfWeek): String = when (day) {
+    DayOfWeek.SATURDAY -> "س"
+    DayOfWeek.SUNDAY -> "ح"
+    DayOfWeek.MONDAY -> "ن"
+    DayOfWeek.TUESDAY -> "ث"
+    DayOfWeek.WEDNESDAY -> "ر"
+    DayOfWeek.THURSDAY -> "خ"
+    DayOfWeek.FRIDAY -> "ج"
+}
+
 private fun formatTime(time: LocalTime): String {
     val hour = if (time.hour % 12 == 0) 12 else time.hour % 12
     val period = if (time.hour < 12) "ص" else "م"
     return String.format(Locale("ar"), "%d:%02d %s", hour, time.minute, period)
 }
 
-private fun taskColor(task: RoutineTask): Color = when (task.id) {
-    "wake" -> Navy
-    "coffee", "breakfast", "lunch" -> PracticeAmber
+private fun taskColor(task: RoutineTask): Color = when (task.progressGroup ?: task.id) {
     "workout" -> SpeakingOrange
     "quran" -> VocabularyGreen
-    "turkish1", "turkish2" -> GrammarBlue
+    "turkish", "turkish1", "turkish2" -> GrammarBlue
     "work" -> MemoryPurple
     "cleaning" -> Teal
     "husband" -> AccentPink
     "shower", "care", "scrub" -> ListeningCyan
     "need_prayer", "dhikr1", "dhikr2", "tahajjud" -> PronunciationRed
+    "coffee", "breakfast", "lunch" -> PracticeAmber
     else -> Navy
 }
 
-private fun iconFor(task: RoutineTask): ImageVector = when (task.id) {
-    "wake" -> Icons.Rounded.Alarm
+private fun iconFor(task: RoutineTask): ImageVector = when (task.progressGroup ?: task.id) {
     "workout" -> Icons.Rounded.FitnessCenter
-    "quran", "turkish1", "turkish2" -> Icons.Rounded.AutoStories
-    "cleaning" -> Icons.Rounded.CleaningServices
+    "quran", "turkish", "turkish1", "turkish2" -> Icons.Rounded.AutoStories
     "work" -> Icons.Rounded.Work
-    "lunch", "breakfast", "coffee" -> Icons.Rounded.Restaurant
+    "cleaning" -> Icons.Rounded.CleaningServices
     "husband" -> Icons.Rounded.Favorite
     "shower", "care", "scrub" -> Icons.Rounded.Spa
     "need_prayer", "dhikr1", "dhikr2", "tahajjud" -> Icons.Rounded.SelfImprovement
-    else -> Icons.Rounded.AccessTime
+    "coffee", "breakfast", "lunch" -> Icons.Rounded.Restaurant
+    "wake" -> Icons.Rounded.Alarm
+    else -> Icons.Rounded.Schedule
 }
