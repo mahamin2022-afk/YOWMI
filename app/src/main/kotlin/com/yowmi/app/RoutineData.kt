@@ -1,6 +1,8 @@
 package com.yowmi.app
 
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
@@ -20,10 +22,11 @@ internal data class RoutineTask(
     val defaultTime: LocalTime,
     val section: String,
     val repeatRule: RepeatRule = RepeatRule.Daily,
-    val progressGroup: String? = null
+    val progressGroup: String? = null,
+    val isCustom: Boolean = false
 )
 
-internal val routineTasks = listOf(
+internal val defaultRoutineTasks = listOf(
     RoutineTask("wake", "الاستيقاظ", "كاسة مي + ترتيب سريع", LocalTime.of(9, 0), "الصباح"),
     RoutineTask("coffee", "قهوة وفطور خفيف", "قهوة + موزة + كاسة حليب + تمر", LocalTime.of(9, 15), "الصباح"),
     RoutineTask("workout", "رياضة", "جلسة الرياضة اليومية", LocalTime.of(9, 45), "الصباح", progressGroup = "workout"),
@@ -49,15 +52,24 @@ internal data class MonthlyProgress(
     val target: Int
 ) {
     val ratio: Float
-        get() = if (target == 0) 0f else (completed.toFloat() / target).coerceIn(0f, 1f)
+        get() = if (target <= 0) 0f else (completed.toFloat() / target).coerceIn(0f, 1f)
+
+    val nextMilestone: Int
+        get() = when {
+            ratio >= 1f -> 100
+            ratio >= .75f -> 100
+            ratio >= .50f -> 75
+            ratio >= .25f -> 50
+            else -> 25
+        }
 
     val stage: String
         get() = when {
-            ratio >= 1f -> "مكتمل"
-            ratio >= 0.75f -> "مرحلة الثبات"
-            ratio >= 0.50f -> "مرحلة التقدم"
-            ratio >= 0.25f -> "مرحلة الاستمرار"
-            else -> "مرحلة البداية"
+            ratio >= 1f -> "وصلتي للهدف"
+            ratio >= .75f -> "المرحلة الأخيرة"
+            ratio >= .50f -> "منتصف الطريق"
+            ratio >= .25f -> "تقدّم ثابت"
+            else -> "بداية الهدف"
         }
 }
 
@@ -68,6 +80,36 @@ internal class RoutineStore(private val context: Context) {
         if (!prefs.contains("cleaning_anchor")) {
             prefs.edit().putString("cleaning_anchor", LocalDate.now().toString()).apply()
         }
+        if (!prefs.contains("tasks_json_v2")) {
+            saveTasks(defaultRoutineTasks)
+        }
+    }
+
+    fun tasks(): List<RoutineTask> {
+        val raw = prefs.getString("tasks_json_v2", null) ?: return defaultRoutineTasks
+        return runCatching {
+            val array = JSONArray(raw)
+            buildList {
+                for (i in 0 until array.length()) {
+                    add(taskFromJson(array.getJSONObject(i)))
+                }
+            }
+        }.getOrElse { defaultRoutineTasks }
+    }
+
+    fun taskById(id: String): RoutineTask? = tasks().firstOrNull { it.id == id }
+
+    fun addTask(task: RoutineTask) {
+        saveTasks(tasks() + task)
+    }
+
+    fun updateTask(task: RoutineTask) {
+        saveTasks(tasks().map { if (it.id == task.id) task else it })
+    }
+
+    fun deleteTask(id: String) {
+        saveTasks(tasks().filterNot { it.id == id })
+        prefs.edit().remove("time_$id").apply()
     }
 
     fun time(task: RoutineTask): LocalTime {
@@ -86,12 +128,6 @@ internal class RoutineStore(private val context: Context) {
         prefs.edit().putBoolean("done_${date}_${task.id}", done).apply()
     }
 
-    fun resetDate(date: LocalDate) {
-        val editor = prefs.edit()
-        activeTasks(date).forEach { editor.remove("done_${date}_${it.id}") }
-        editor.apply()
-    }
-
     fun notificationsEnabled(): Boolean = prefs.getBoolean("notifications", true)
 
     fun setNotificationsEnabled(enabled: Boolean) {
@@ -103,7 +139,7 @@ internal class RoutineStore(private val context: Context) {
     }
 
     fun activeTasks(date: LocalDate): List<RoutineTask> =
-        routineTasks.filter { isActive(it, date) }
+        tasks().filter { isActive(it, date) }.sortedBy { time(it) }
 
     fun isActive(task: RoutineTask, date: LocalDate): Boolean = when (val rule = task.repeatRule) {
         RepeatRule.Daily -> true
@@ -127,21 +163,87 @@ internal class RoutineStore(private val context: Context) {
         return active.count { isDone(it, date) } to active.size
     }
 
-    fun monthlyProgress(group: String, month: YearMonth): MonthlyProgress {
-        val groupTasks = routineTasks.filter { it.progressGroup == group }
-        var completed = 0
-        var target = 0
+    fun goalTarget(group: String, month: YearMonth): Int {
+        val key = "goal_${month}_$group"
+        val saved = prefs.getInt(key, -1)
+        if (saved > 0) return saved
 
+        var scheduled = 0
+        val groupTasks = tasks().filter { it.progressGroup == group }
         for (day in 1..month.lengthOfMonth()) {
             val date = month.atDay(day)
             groupTasks.forEach { task ->
-                if (isActive(task, date)) {
-                    target++
-                    if (isDone(task, date)) completed++
-                }
+                if (isActive(task, date)) scheduled++
             }
         }
-        return MonthlyProgress(completed, target)
+        return scheduled.coerceAtLeast(1)
+    }
+
+    fun setGoalTarget(group: String, month: YearMonth, target: Int) {
+        prefs.edit().putInt("goal_${month}_$group", target.coerceAtLeast(1)).apply()
+    }
+
+    fun monthlyProgress(group: String, month: YearMonth): MonthlyProgress {
+        val groupTasks = tasks().filter { it.progressGroup == group }
+        var completed = 0
+        for (day in 1..month.lengthOfMonth()) {
+            val date = month.atDay(day)
+            groupTasks.forEach { task ->
+                if (isActive(task, date) && isDone(task, date)) completed++
+            }
+        }
+        return MonthlyProgress(completed, goalTarget(group, month))
+    }
+
+    private fun saveTasks(items: List<RoutineTask>) {
+        val array = JSONArray()
+        items.forEach { array.put(taskToJson(it)) }
+        prefs.edit().putString("tasks_json_v2", array.toString()).apply()
+    }
+
+    private fun taskToJson(task: RoutineTask): JSONObject = JSONObject().apply {
+        put("id", task.id)
+        put("title", task.title)
+        put("subtitle", task.subtitle)
+        put("defaultTime", task.defaultTime.toString())
+        put("section", task.section)
+        put("progressGroup", task.progressGroup ?: JSONObject.NULL)
+        put("isCustom", task.isCustom)
+        when (val rule = task.repeatRule) {
+            RepeatRule.Daily -> put("repeatType", "daily")
+            RepeatRule.AlternateDays -> put("repeatType", "alternate")
+            is RepeatRule.Weekly -> {
+                put("repeatType", "weekly")
+                put("days", JSONArray(rule.days.map { it.value }))
+            }
+        }
+    }
+
+    private fun taskFromJson(obj: JSONObject): RoutineTask {
+        val repeat = when (obj.optString("repeatType", "daily")) {
+            "alternate" -> RepeatRule.AlternateDays
+            "weekly" -> {
+                val arr = obj.optJSONArray("days") ?: JSONArray()
+                val days = buildSet {
+                    for (i in 0 until arr.length()) {
+                        runCatching { add(DayOfWeek.of(arr.getInt(i))) }
+                    }
+                }
+                RepeatRule.Weekly(days.ifEmpty { setOf(DayOfWeek.MONDAY) })
+            }
+            else -> RepeatRule.Daily
+        }
+        val progressGroup = if (obj.isNull("progressGroup")) null else obj.optString("progressGroup", null)
+        return RoutineTask(
+            id = obj.getString("id"),
+            title = obj.getString("title"),
+            subtitle = obj.optString("subtitle", ""),
+            defaultTime = runCatching { LocalTime.parse(obj.getString("defaultTime")) }.getOrDefault(LocalTime.NOON),
+            section = obj.optString("section", "اليوم"),
+            repeatRule = repeat,
+            progressGroup = progressGroup,
+            isCustom = obj.optBoolean("isCustom", false)
+        )
     }
 
     private fun arabicDay(day: DayOfWeek): String = when (day) {
