@@ -108,6 +108,15 @@ internal fun AdvancedGoalsScreen(
 
     val month = YearMonth.now()
     val selected = goalUiList.firstOrNull { it.id == selectedGoalId } ?: goalUiList[1]
+
+    if (selected.kind == GoalKind.TURKISH) {
+        ContinuousTurkishGoalScreen(
+            modifier = modifier,
+            onSelectGoal = onSelectGoal
+        )
+        return
+    }
+
     val allOverview = goalUiList.map { store.overview(it.kind, month) }
     val totalXp = allOverview.sumOf { it.xp }
     val globalLevel = (totalXp / 500) + 1
