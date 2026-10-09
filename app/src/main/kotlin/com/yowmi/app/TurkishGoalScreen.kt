@@ -130,8 +130,8 @@ internal fun ContinuousTurkishGoalScreen(
                     Surface(
                         modifier = Modifier.clickable { onSelectGoal(item.id) },
                         shape = RoundedCornerShape(18.dp),
-                        color = if (item.id == "turkish") item.color else Color.White,
-                        border = if (item.id == "turkish") null else BorderStroke(1.dp, TurkishBorder)
+                        color = if (item.id == "turkish") YowmiPalette.BlueSurface else Color.White,
+                        border = BorderStroke(1.dp, if (item.id == "turkish") TurkishBlue.copy(alpha = .60f) else TurkishBorder)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
@@ -140,13 +140,13 @@ internal fun ContinuousTurkishGoalScreen(
                             Icon(
                                 item.icon,
                                 null,
-                                tint = if (item.id == "turkish") Color.White else item.color,
+                                tint = item.color,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 item.label,
-                                color = if (item.id == "turkish") Color.White else TurkishNavy,
+                                color = TurkishNavy,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -560,48 +560,48 @@ private fun LevelJourneyMap(
                     .clickable(enabled = unlocked) { onSelectLevel(level) },
                 shape = RoundedCornerShape(24.dp),
                 color = when {
-                    selected -> color
+                    selected -> color.copy(alpha = .13f)
                     !unlocked -> YowmiPalette.LilacWash
                     else -> Color.White
                 },
-                border = if (selected) null else BorderStroke(1.dp, TurkishBorder)
+                border = BorderStroke(1.dp, if (selected) color.copy(alpha = .5f) else TurkishBorder)
             ) {
                 Column(Modifier.padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             level.id,
-                            color = if (selected) Color.White else if (unlocked) color else TurkishMuted,
+                            color = if (selected) TurkishNavy else if (unlocked) color else TurkishMuted,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Black
                         )
                         Spacer(Modifier.weight(1f))
                         when {
-                            complete -> Icon(Icons.Rounded.Check, null, tint = if (selected) Color.White else TurkishGreen, modifier = Modifier.size(18.dp))
+                            complete -> Icon(Icons.Rounded.Check, null, tint = TurkishGreen, modifier = Modifier.size(18.dp))
                             !unlocked -> Icon(Icons.Rounded.Lock, null, tint = TurkishMuted, modifier = Modifier.size(17.dp))
                         }
                     }
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "$completed/${level.lessons.size} درس/مهارة",
-                        color = if (selected) Color.White.copy(alpha = .88f) else TurkishMuted,
+                        color = TurkishMuted,
                         fontSize = 10.sp
                     )
                     Spacer(Modifier.height(6.dp))
                     LinearProgressIndicator(
                         progress = { completed.toFloat() / level.lessons.size },
                         modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                        color = if (selected) Color.White else color,
-                        trackColor = if (selected) Color.White.copy(alpha = .20f) else color.copy(alpha = .10f)
+                        color = color,
+                        trackColor = color.copy(alpha = .10f)
                     )
                     Spacer(Modifier.height(7.dp))
                     Text(
                         "900 مفردة • ${level.reviewAfterLessonNumbers.size} مراجعات",
-                        color = if (selected) Color.White.copy(alpha = .70f) else TurkishMuted,
+                        color = TurkishMuted,
                         fontSize = 9.sp
                     )
                     Text(
                         if (store.levelExamDone(level.id)) "الاختبار مكتمل" else "اختبار نهاية المستوى",
-                        color = if (selected) Color.White.copy(alpha = .70f) else TurkishMuted,
+                        color = TurkishMuted,
                         fontSize = 9.sp
                     )
                 }
