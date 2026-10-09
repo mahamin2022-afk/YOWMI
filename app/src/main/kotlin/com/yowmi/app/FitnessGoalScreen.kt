@@ -64,17 +64,17 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val FitnessNavy = YowmiPalette.Text
-private val FitnessOrange = YowmiPalette.Coral
-private val FitnessTeal = YowmiPalette.Mint
-private val FitnessPink = YowmiPalette.Pink
-private val FitnessBlue = YowmiPalette.Lavender
-private val FitnessGreen = YowmiPalette.Mint
-private val FitnessPurple = YowmiPalette.Berry
-private val FitnessAmber = YowmiPalette.Gold
+private val FitnessOrange = YowmiPalette.PeachOrange
+private val FitnessTeal = YowmiPalette.Secondary
+private val FitnessPink = YowmiPalette.Accent
+private val FitnessBlue = YowmiPalette.GrammarBlue
+private val FitnessGreen = YowmiPalette.MintGreen
+private val FitnessPurple = YowmiPalette.OrchidPurple
+private val FitnessAmber = YowmiPalette.WarmYellow
 private val FitnessBg = YowmiPalette.Canvas
-private val FitnessMuted = YowmiPalette.Muted
+private val FitnessMuted = YowmiPalette.SecondaryText
 private val FitnessBorder = YowmiPalette.Border
-private val FitnessDanger = YowmiPalette.Danger
+private val FitnessDanger = YowmiPalette.SoftRed
 
 private data class FitnessGoalSwitch(
     val id: String,
@@ -130,8 +130,8 @@ internal fun FitnessGoalScreen(
                     Surface(
                         modifier = Modifier.clickable { onSelectGoal(item.id) },
                         shape = RoundedCornerShape(18.dp),
-                        color = if (item.id == "workout") item.color else Color.White,
-                        border = if (item.id == "workout") null else BorderStroke(1.dp, FitnessBorder)
+                        color = if (item.id == "workout") YowmiPalette.PeachSurface else Color.White,
+                        border = BorderStroke(1.dp, if (item.id == "workout") FitnessOrange.copy(alpha = .5f) else FitnessBorder)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
@@ -140,13 +140,13 @@ internal fun FitnessGoalScreen(
                             Icon(
                                 item.icon,
                                 null,
-                                tint = if (item.id == "workout") Color.White else item.color,
+                                tint = item.color,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 item.label,
-                                color = if (item.id == "workout") Color.White else FitnessNavy,
+                                color = FitnessNavy,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -320,17 +320,17 @@ private fun FitnessHero(
 
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("رحلة الجسم الأقوى ✦", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text("برنامج منزلي • 8 أسابيع", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
+                    Text("رحلة الجسم الأقوى ✦", color = FitnessNavy, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Text("برنامج منزلي • 8 أسابيع", color = FitnessMuted, fontSize = 12.sp)
                 }
 
-                Surface(shape = RoundedCornerShape(17.dp), color = Color.White.copy(alpha = .12f)) {
+                Surface(shape = RoundedCornerShape(17.dp), color = FitnessNavy.copy(alpha = .12f)) {
                     Column(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("WEEK", color = Color.White.copy(alpha = .62f), fontSize = 8.sp)
-                        Text("${progress.week}/8", color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                        Text("WEEK", color = FitnessMuted, fontSize = 8.sp)
+                        Text("${progress.week}/8", color = FitnessNavy, fontSize = 19.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -340,18 +340,18 @@ private fun FitnessHero(
                 progress = { progress.ratio },
                 modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
                 color = FitnessTeal,
-                trackColor = Color.White.copy(alpha = .15f)
+                trackColor = YowmiPalette.Border
             )
             Spacer(Modifier.height(7.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(
                     "${progress.completed} / ${progress.target} تمرين أساسي",
-                    color = Color.White.copy(alpha = .76f),
+                    color = FitnessMuted,
                     fontSize = 11.sp
                 )
                 Text(
                     "${(progress.ratio * 100).toInt()}%",
-                    color = Color.White,
+                    color = FitnessNavy,
                     fontWeight = FontWeight.Black,
                     fontSize = 12.sp
                 )
@@ -371,13 +371,13 @@ private fun FitnessHero(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                color = Color.White.copy(alpha = .10f)
+                color = FitnessNavy.copy(alpha = .10f)
             ) {
                 Column(Modifier.padding(13.dp)) {
-                    Text("مدة البرنامج", color = Color.White.copy(alpha = .60f), fontSize = 10.sp)
+                    Text("مدة البرنامج", color = FitnessMuted, fontSize = 10.sp)
                     Text(
                         "${start.format(format)} → ${end.format(format)}",
-                        color = Color.White,
+                        color = FitnessNavy,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -392,7 +392,7 @@ private fun FitnessHeroStat(text: String, color: Color) {
         Text(
             text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            color = Color.White,
+            color = FitnessNavy,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
@@ -527,20 +527,20 @@ private fun PhaseRoadmap(
 private fun PhaseDetailCard(week: Int, phase: FitnessPhase, current: Boolean) {
     Card(
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = FitnessOrange)
+        colors = CardDefaults.cardColors(containerColor = YowmiPalette.PeachSurface)
     ) {
         Column(Modifier.padding(17.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("الأسبوع $week", color = Color.White.copy(alpha = .70f), fontSize = 10.sp)
-                    Text(phase.title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                    Text("الأسبوع $week", color = FitnessMuted, fontSize = 10.sp)
+                    Text(phase.title, color = FitnessNavy, fontSize = 19.sp, fontWeight = FontWeight.Black)
                 }
                 if (current) {
-                    Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = .18f)) {
+                    Surface(shape = RoundedCornerShape(50), color = YowmiPalette.Surface) {
                         Text(
                             "مرحلتك الحالية",
                             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                            color = Color.White,
+                            color = FitnessNavy,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -548,7 +548,7 @@ private fun PhaseDetailCard(week: Int, phase: FitnessPhase, current: Boolean) {
                 }
             }
             Spacer(Modifier.height(9.dp))
-            Text(phase.rule, color = Color.White.copy(alpha = .88f), fontSize = 12.sp)
+            Text(phase.rule, color = FitnessNavy, fontSize = 12.sp)
         }
     }
 }
@@ -572,8 +572,8 @@ private fun DayChip(
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(19.dp),
-        color = if (selected) typeColor else Color.White,
-        border = if (selected) null else BorderStroke(1.dp, FitnessBorder)
+        color = if (selected) typeColor.copy(alpha = .13f) else Color.White,
+        border = BorderStroke(1.dp, if (selected) typeColor.copy(alpha = .6f) else FitnessBorder)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
@@ -581,12 +581,12 @@ private fun DayChip(
         ) {
             Text(
                 date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("ar")),
-                color = if (selected) Color.White else FitnessMuted,
+                color = FitnessMuted,
                 fontSize = 9.sp
             )
             Text(
                 "${date.dayOfMonth}",
-                color = if (selected) Color.White else FitnessNavy,
+                color = FitnessNavy,
                 fontWeight = FontWeight.Black
             )
             Text(
@@ -596,7 +596,7 @@ private fun DayChip(
                     completed -> "✓"
                     else -> "$done/$target"
                 },
-                color = if (selected) Color.White.copy(alpha = .78f) else typeColor,
+                color = FitnessNavy,
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Bold
             )

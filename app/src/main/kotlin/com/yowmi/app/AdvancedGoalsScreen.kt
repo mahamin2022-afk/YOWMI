@@ -67,15 +67,15 @@ import java.time.format.TextStyle
 import java.util.Locale
 
 private val GoalNavy = YowmiPalette.Text
-private val GoalTeal = YowmiPalette.Berry
-private val GoalPink = YowmiPalette.Pink
-private val GoalBlue = YowmiPalette.Lavender
-private val GoalGreen = YowmiPalette.Mint
-private val GoalPurple = YowmiPalette.Berry
-private val GoalOrange = YowmiPalette.Coral
-private val GoalAmber = YowmiPalette.Gold
+private val GoalTeal = YowmiPalette.Secondary
+private val GoalPink = YowmiPalette.Accent
+private val GoalBlue = YowmiPalette.GrammarBlue
+private val GoalGreen = YowmiPalette.MintGreen
+private val GoalPurple = YowmiPalette.OrchidPurple
+private val GoalOrange = YowmiPalette.PeachOrange
+private val GoalAmber = YowmiPalette.WarmYellow
 private val GoalBg = YowmiPalette.Canvas
-private val GoalMuted = YowmiPalette.Muted
+private val GoalMuted = YowmiPalette.SecondaryText
 private val GoalBorder = YowmiPalette.Border
 
 private data class GoalUi(
@@ -247,30 +247,30 @@ private fun GameProfileHeader(level: Int, xp: Int, overallProgress: Float) {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("رحلة أهدافي ✦", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                    Text("كل إنجاز صغير يفتح مرحلة جديدة", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
+                    Text("رحلة أهدافي ✦", color = GoalNavy, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text("كل إنجاز صغير يفتح مرحلة جديدة", color = GoalMuted, fontSize = 12.sp)
                 }
-                Surface(shape = RoundedCornerShape(16.dp), color = Color.White.copy(alpha = .12f)) {
+                Surface(shape = RoundedCornerShape(16.dp), color = GoalNavy.copy(alpha = .12f)) {
                     Column(
                         modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("LEVEL", color = Color.White.copy(alpha = .62f), fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                        Text("$level", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                        Text("LEVEL", color = GoalMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                        Text("$level", color = GoalNavy, fontSize = 21.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
             Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("تقدم كل الأهداف", color = Color.White.copy(alpha = .76f), fontSize = 12.sp)
-                Text("$xp XP", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text("تقدم كل الأهداف", color = GoalMuted, fontSize = 12.sp)
+                Text("$xp XP", color = GoalNavy, fontWeight = FontWeight.Black, fontSize = 12.sp)
             }
             Spacer(Modifier.height(8.dp))
             LinearProgressIndicator(
                 progress = { overallProgress },
                 modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
                 color = GoalTeal,
-                trackColor = Color.White.copy(alpha = .15f)
+                trackColor = YowmiPalette.Border
             )
         }
     }
@@ -281,8 +281,8 @@ private fun GoalSelectorChip(goal: GoalUi, selected: Boolean, percent: Int, onCl
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        color = if (selected) goal.color else Color.White,
-        border = if (selected) null else BorderStroke(1.dp, GoalBorder)
+        color = if (selected) goal.color.copy(alpha = .12f) else Color.White,
+        border = BorderStroke(1.dp, if (selected) goal.color.copy(alpha = .6f) else GoalBorder)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
@@ -291,20 +291,20 @@ private fun GoalSelectorChip(goal: GoalUi, selected: Boolean, percent: Int, onCl
             Icon(
                 goal.icon,
                 null,
-                tint = if (selected) Color.White else goal.color,
+                tint = goal.color,
                 modifier = Modifier.size(19.dp)
             )
             Spacer(Modifier.width(7.dp))
             Column {
                 Text(
                     goal.title,
-                    color = if (selected) Color.White else GoalNavy,
+                    color = GoalNavy,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp
                 )
                 Text(
                     "$percent%",
-                    color = if (selected) Color.White.copy(alpha = .75f) else GoalMuted,
+                    color = GoalMuted,
                     fontSize = 9.sp
                 )
             }
