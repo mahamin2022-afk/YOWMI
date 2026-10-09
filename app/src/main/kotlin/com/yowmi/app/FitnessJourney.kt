@@ -399,17 +399,6 @@ internal class FitnessJourneyStore(context: Context) {
         prefs.edit().putBoolean("done_${date}_$exerciseId", done).apply()
     }
 
-    fun exerciseImageUri(exerciseId: String): String? =
-        prefs.getString("exercise_image_$exerciseId", null)
-
-    fun setExerciseImageUri(exerciseId: String, uri: String) {
-        prefs.edit().putString("exercise_image_$exerciseId", uri).apply()
-    }
-
-    fun clearExerciseImageUri(exerciseId: String) {
-        prefs.edit().remove("exercise_image_$exerciseId").apply()
-    }
-
     fun dayProgress(date: LocalDate): Pair<Int, Int> {
         val required = planFor(date.dayOfWeek).exercises.filter { it.required }
         return required.count { isDone(date, it.id) } to required.size
