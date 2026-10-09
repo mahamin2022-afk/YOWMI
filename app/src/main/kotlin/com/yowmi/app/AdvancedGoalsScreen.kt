@@ -90,7 +90,7 @@ private data class GoalUi(
 private val goalUiList = listOf(
     GoalUi(GoalKind.QURAN, "quran", "القرآن", "ختمات وورد يومي", GoalGreen, Icons.Rounded.AutoStories),
     GoalUi(GoalKind.TURKISH, "turkish", "التركي", "رحلة إنهاء A1", GoalBlue, Icons.Rounded.AutoStories),
-    GoalUi(GoalKind.FITNESS, "workout", "الرياضة", "خطة أسبوعية + تكرارات", GoalOrange, Icons.Rounded.FitnessCenter),
+    GoalUi(GoalKind.FITNESS, "workout", "الرياضة", "برنامج منزلي متدرّج 8 أسابيع", GoalOrange, Icons.Rounded.FitnessCenter),
     GoalUi(GoalKind.WORK, "work", "التطبيق / الشغل", "مراحل المشروع", GoalPurple, Icons.Rounded.Work)
 )
 
@@ -111,6 +111,14 @@ internal fun AdvancedGoalsScreen(
 
     if (selected.kind == GoalKind.TURKISH) {
         ContinuousTurkishGoalScreen(
+            modifier = modifier,
+            onSelectGoal = onSelectGoal
+        )
+        return
+    }
+
+    if (selected.kind == GoalKind.FITNESS) {
+        FitnessGoalScreen(
             modifier = modifier,
             onSelectGoal = onSelectGoal
         )

@@ -188,17 +188,8 @@ internal class GoalJourneyStore(context: Context) {
     fun isExerciseDone(date: LocalDate, id: String): Boolean = prefs.getBoolean("fitness_${date}_$id", false)
     fun setExerciseDone(date: LocalDate, id: String, done: Boolean) = prefs.edit().putBoolean("fitness_${date}_$id", done).apply()
     fun workoutFor(day: DayOfWeek): WorkoutDay = fitnessPlan.first { it.day == day }
-    fun fitnessOverview(month: YearMonth): GoalOverview {
-        var completed = 0
-        var target = 0
-        for (day in 1..month.lengthOfMonth()) {
-            val date = month.atDay(day)
-            val plan = workoutFor(date.dayOfWeek)
-            target += plan.exercises.size
-            completed += plan.exercises.count { isExerciseDone(date, it.id) }
-        }
-        return overview(completed, target, streakFitness())
-    }
+    fun fitnessOverview(month: YearMonth): GoalOverview =
+        FitnessJourneyStore(appContext).asGoalOverview()
 
     fun workGoalTitle(): String = prefs.getString("work_goal_title", "إنهاء النسخة الحالية من المشروع") ?: "إنهاء النسخة الحالية من المشروع"
     fun setWorkGoalTitle(value: String) = prefs.edit().putString("work_goal_title", value.ifBlank { "إنهاء النسخة الحالية من المشروع" }).apply()
