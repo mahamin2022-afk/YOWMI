@@ -62,16 +62,16 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val TurkishNavy = Color(0xFF344C49)
-private val TurkishBlue = Color(0xFF6E8EC5)
-private val TurkishTeal = Color(0xFF4F9587)
-private val TurkishPink = Color(0xFFBE829B)
-private val TurkishGreen = Color(0xFF4E9A80)
-private val TurkishPurple = Color(0xFF827BAE)
-private val TurkishOrange = Color(0xFFC88458)
-private val TurkishBg = Color(0xFFF7F8F6)
-private val TurkishMuted = Color(0xFF76847F)
-private val TurkishBorder = Color(0xFFE4EBE7)
+private val TurkishNavy = YowmiPalette.Text
+private val TurkishBlue = YowmiPalette.Lavender
+private val TurkishTeal = YowmiPalette.Mint
+private val TurkishPink = YowmiPalette.Pink
+private val TurkishGreen = YowmiPalette.Mint
+private val TurkishPurple = YowmiPalette.Berry
+private val TurkishOrange = YowmiPalette.Coral
+private val TurkishBg = YowmiPalette.Canvas
+private val TurkishMuted = YowmiPalette.Muted
+private val TurkishBorder = YowmiPalette.Border
 
 private data class GoalSwitchItem(
     val id: String,
@@ -297,8 +297,11 @@ private fun TurkishHero(
     val overallRatio = completedLessons.toFloat() / allTurkishLessons.size
 
     Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(YowmiPalette.TurkishHero, RoundedCornerShape(32.dp)),
         shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(containerColor = TurkishNavy)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -312,7 +315,7 @@ private fun TurkishHero(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Türkçe Yolculuğu", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text("Türkçe Yolculuğu ✦", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
                     Text("A1 → A2 → B1 • منهاج واحد متدرج", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
                 }
                 Surface(shape = RoundedCornerShape(17.dp), color = Color.White.copy(alpha = .12f)) {
@@ -558,7 +561,7 @@ private fun LevelJourneyMap(
                 shape = RoundedCornerShape(24.dp),
                 color = when {
                     selected -> color
-                    !unlocked -> Color(0xFFEEF1F6)
+                    !unlocked -> YowmiPalette.LilacWash
                     else -> Color.White
                 },
                 border = if (selected) null else BorderStroke(1.dp, TurkishBorder)
@@ -722,7 +725,7 @@ private fun LessonProgressCard(
         shape = RoundedCornerShape(25.dp),
         colors = CardDefaults.cardColors(
             containerColor = when {
-                !unlocked -> Color(0xFFF0F2F7)
+                !unlocked -> YowmiPalette.LilacWash
                 complete -> TurkishGreen.copy(alpha = .06f)
                 else -> Color.White
             }
@@ -745,7 +748,7 @@ private fun LessonProgressCard(
                             when {
                                 complete -> TurkishGreen
                                 unlocked -> color.copy(alpha = .12f)
-                                else -> Color(0xFFE0E5ED)
+                                else -> YowmiPalette.LilacWash
                             },
                             RoundedCornerShape(14.dp)
                         ),
@@ -863,7 +866,7 @@ private fun ReviewCheckpointCard(
                 Box(
                     modifier = Modifier
                         .size(42.dp)
-                        .background(if (unlocked) color.copy(alpha = .12f) else Color(0xFFE0E5ED), RoundedCornerShape(14.dp)),
+                        .background(if (unlocked) color.copy(alpha = .12f) else YowmiPalette.LilacWash, RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     when {
@@ -948,7 +951,7 @@ private fun FinalExamCard(
                         .background(
                             if (completed) TurkishGreen.copy(alpha = .12f)
                             else if (unlocked) color.copy(alpha = .12f)
-                            else Color(0xFFE0E5ED),
+                            else YowmiPalette.LilacWash,
                             RoundedCornerShape(16.dp)
                         ),
                     contentAlignment = Alignment.Center
