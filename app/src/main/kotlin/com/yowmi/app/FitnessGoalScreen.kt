@@ -1,10 +1,5 @@
 package com.yowmi.app
 
-import android.content.Intent
-import android.net.Uri
-import android.widget.ImageView
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,10 +22,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Home
@@ -62,7 +55,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,18 +63,18 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val FitnessNavy = Color(0xFF172B4D)
-private val FitnessOrange = Color(0xFFFF7A00)
-private val FitnessTeal = Color(0xFF00A9A5)
-private val FitnessPink = Color(0xFFEC4B99)
-private val FitnessBlue = Color(0xFF3478F6)
-private val FitnessGreen = Color(0xFF00B88A)
-private val FitnessPurple = Color(0xFF8B5CF6)
-private val FitnessAmber = Color(0xFFFFB000)
-private val FitnessBg = Color(0xFFF5F7FC)
-private val FitnessMuted = Color(0xFF6E7A90)
-private val FitnessBorder = Color(0xFFE5EAF2)
-private val FitnessDanger = Color(0xFFE5484D)
+private val FitnessNavy = Color(0xFF344C49)
+private val FitnessOrange = Color(0xFFC88458)
+private val FitnessTeal = Color(0xFF4F9587)
+private val FitnessPink = Color(0xFFBE829B)
+private val FitnessBlue = Color(0xFF6E8EC5)
+private val FitnessGreen = Color(0xFF4E9A80)
+private val FitnessPurple = Color(0xFF827BAE)
+private val FitnessAmber = Color(0xFFD9A35E)
+private val FitnessBg = Color(0xFFF7F8F6)
+private val FitnessMuted = Color(0xFF76847F)
+private val FitnessBorder = Color(0xFFE4EBE7)
+private val FitnessDanger = Color(0xFFC76568)
 
 private data class FitnessGoalSwitch(
     val id: String,
@@ -112,24 +104,6 @@ internal fun FitnessGoalScreen(
             if (LocalDate.now().isBefore(store.startDate())) store.startDate()
             else LocalDate.now()
         )
-    }
-    var imageTargetExerciseId by remember { mutableStateOf<String?>(null) }
-
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        val exerciseId = imageTargetExerciseId
-        if (uri != null && exerciseId != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
-                )
-            }
-            store.setExerciseImageUri(exerciseId, uri.toString())
-            refresh++
-        }
-        imageTargetExerciseId = null
     }
 
     val progress = remember(refresh) { store.progress() }
@@ -210,7 +184,7 @@ internal fun FitnessGoalScreen(
         }
 
         item {
-            Text("أيام الأسبوع $selectedWeek", color = FitnessNavy, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Text("أيام الأسبوع §selectedWeek", color = FitnessNavy, fontSize = 20.sp, fontWeight = FontWeight.Black)
         }
 
         item {
@@ -263,17 +237,8 @@ internal fun FitnessGoalScreen(
                         exercise = exercise,
                         week = selectedWeek,
                         done = store.isDone(selectedDate, exercise.id),
-                        imageUri = store.exerciseImageUri(exercise.id),
                         recommendedSets = store.recommendedSets(exercise, selectedWeek),
                         progressionNote = store.progressionNote(exercise, selectedWeek),
-                        onChooseImage = {
-                            imageTargetExerciseId = exercise.id
-                            imagePickerLauncher.launch(arrayOf("image/*"))
-                        },
-                        onRemoveImage = {
-                            store.clearExerciseImageUri(exercise.id)
-                            refresh++
-                        },
                         onToggle = {
                             store.setDone(
                                 selectedDate,
@@ -699,11 +664,8 @@ private fun ExerciseCard(
     exercise: FitnessExercise,
     week: Int,
     done: Boolean,
-    imageUri: String?,
     recommendedSets: Int,
     progressionNote: String,
-    onChooseImage: () -> Unit,
-    onRemoveImage: () -> Unit,
     onToggle: () -> Unit
 ) {
     var expanded by remember(exercise.id, week) { mutableStateOf(false) }
@@ -764,15 +726,6 @@ private fun ExerciseCard(
                     }
                 }
             }
-
-            Spacer(Modifier.height(12.dp))
-            ExerciseImagePanel(
-                imageUri = imageUri,
-                exerciseName = exercise.arabicName,
-                color = color,
-                onChooseImage = onChooseImage,
-                onRemoveImage = onRemoveImage
-            )
 
             Spacer(Modifier.height(9.dp))
             Surface(
@@ -837,114 +790,6 @@ private fun ExerciseCard(
                         Icon(Icons.Rounded.Info, null, tint = FitnessBlue, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(exercise.alternative, color = FitnessBlue, fontSize = 10.sp)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExerciseImagePanel(
-    imageUri: String?,
-    exerciseName: String,
-    color: Color,
-    onChooseImage: () -> Unit,
-    onRemoveImage: () -> Unit
-) {
-    if (imageUri.isNullOrBlank()) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onChooseImage),
-            shape = RoundedCornerShape(18.dp),
-            color = Color(0xFFF8FAFD),
-            border = BorderStroke(1.dp, color.copy(alpha = .22f))
-        ) {
-            Column(
-                modifier = Modifier.padding(vertical = 24.dp, horizontal = 14.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .background(color.copy(alpha = .10f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Rounded.Add, null, tint = color, modifier = Modifier.size(24.dp))
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "إضافة صورة للتمرين",
-                    color = FitnessNavy,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 13.sp
-                )
-                Text(
-                    "اختاري صورة توضيحية من الموبايل",
-                    color = FitnessMuted,
-                    fontSize = 10.sp
-                )
-            }
-        }
-    } else {
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFD)),
-            border = BorderStroke(1.dp, color.copy(alpha = .18f))
-        ) {
-            Column {
-                AndroidView(
-                    factory = { ctx ->
-                        ImageView(ctx).apply {
-                            scaleType = ImageView.ScaleType.CENTER_CROP
-                            adjustViewBounds = true
-                        }
-                    },
-                    update = { imageView ->
-                        imageView.setImageURI(Uri.parse(imageUri))
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(210.dp)
-                        .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                )
-
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            "صورة $exerciseName",
-                            color = FitnessNavy,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text("محفوظة لهذا التمرين", color = FitnessMuted, fontSize = 9.sp)
-                    }
-
-                    OutlinedButton(
-                        onClick = onChooseImage,
-                        shape = RoundedCornerShape(13.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Icon(Icons.Rounded.Add, null, modifier = Modifier.size(15.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("تغيير", fontSize = 9.sp)
-                    }
-
-                    Spacer(Modifier.width(6.dp))
-
-                    OutlinedButton(
-                        onClick = onRemoveImage,
-                        shape = RoundedCornerShape(13.dp),
-                        contentPadding = PaddingValues(horizontal = 9.dp, vertical = 5.dp),
-                        border = BorderStroke(1.dp, FitnessDanger.copy(alpha = .35f))
-                    ) {
-                        Icon(Icons.Rounded.Delete, null, tint = FitnessDanger, modifier = Modifier.size(15.dp))
-                        Spacer(Modifier.width(3.dp))
-                        Text("حذف", color = FitnessDanger, fontSize = 9.sp)
                     }
                 }
             }

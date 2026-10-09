@@ -62,16 +62,16 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val TurkishNavy = Color(0xFF172B4D)
-private val TurkishBlue = Color(0xFF3478F6)
-private val TurkishTeal = Color(0xFF00A9A5)
-private val TurkishPink = Color(0xFFEC4B99)
-private val TurkishGreen = Color(0xFF00B88A)
-private val TurkishPurple = Color(0xFF8B5CF6)
-private val TurkishOrange = Color(0xFFFF7A00)
-private val TurkishBg = Color(0xFFF5F7FC)
-private val TurkishMuted = Color(0xFF6E7A90)
-private val TurkishBorder = Color(0xFFE5EAF2)
+private val TurkishNavy = Color(0xFF344C49)
+private val TurkishBlue = Color(0xFF6E8EC5)
+private val TurkishTeal = Color(0xFF4F9587)
+private val TurkishPink = Color(0xFFBE829B)
+private val TurkishGreen = Color(0xFF4E9A80)
+private val TurkishPurple = Color(0xFF827BAE)
+private val TurkishOrange = Color(0xFFC88458)
+private val TurkishBg = Color(0xFFF7F8F6)
+private val TurkishMuted = Color(0xFF76847F)
+private val TurkishBorder = Color(0xFFE4EBE7)
 
 private data class GoalSwitchItem(
     val id: String,
