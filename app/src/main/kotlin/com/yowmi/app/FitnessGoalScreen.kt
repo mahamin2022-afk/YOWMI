@@ -130,8 +130,8 @@ internal fun FitnessGoalScreen(
                     Surface(
                         modifier = Modifier.clickable { onSelectGoal(item.id) },
                         shape = RoundedCornerShape(18.dp),
-                        color = if (item.id == "workout") item.color else Color.White,
-                        border = if (item.id == "workout") null else BorderStroke(1.dp, FitnessBorder)
+                        color = if (item.id == "workout") YowmiPalette.PeachSurface else Color.White,
+                        border = BorderStroke(1.dp, if (item.id == "workout") FitnessOrange.copy(alpha = .5f) else FitnessBorder)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
@@ -140,13 +140,13 @@ internal fun FitnessGoalScreen(
                             Icon(
                                 item.icon,
                                 null,
-                                tint = if (item.id == "workout") Color.White else item.color,
+                                tint = item.color,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 item.label,
-                                color = if (item.id == "workout") Color.White else FitnessNavy,
+                                color = FitnessNavy,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold
                             )
@@ -527,20 +527,20 @@ private fun PhaseRoadmap(
 private fun PhaseDetailCard(week: Int, phase: FitnessPhase, current: Boolean) {
     Card(
         shape = RoundedCornerShape(26.dp),
-        colors = CardDefaults.cardColors(containerColor = FitnessOrange)
+        colors = CardDefaults.cardColors(containerColor = YowmiPalette.PeachSurface)
     ) {
         Column(Modifier.padding(17.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("الأسبوع $week", color = Color.White.copy(alpha = .70f), fontSize = 10.sp)
-                    Text(phase.title, color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                    Text("الأسبوع $week", color = FitnessMuted, fontSize = 10.sp)
+                    Text(phase.title, color = FitnessNavy, fontSize = 19.sp, fontWeight = FontWeight.Black)
                 }
                 if (current) {
-                    Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = .18f)) {
+                    Surface(shape = RoundedCornerShape(50), color = YowmiPalette.Surface) {
                         Text(
                             "مرحلتك الحالية",
                             modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                            color = Color.White,
+                            color = FitnessNavy,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -548,7 +548,7 @@ private fun PhaseDetailCard(week: Int, phase: FitnessPhase, current: Boolean) {
                 }
             }
             Spacer(Modifier.height(9.dp))
-            Text(phase.rule, color = Color.White.copy(alpha = .88f), fontSize = 12.sp)
+            Text(phase.rule, color = FitnessNavy, fontSize = 12.sp)
         }
     }
 }
@@ -572,8 +572,8 @@ private fun DayChip(
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(19.dp),
-        color = if (selected) typeColor else Color.White,
-        border = if (selected) null else BorderStroke(1.dp, FitnessBorder)
+        color = if (selected) typeColor.copy(alpha = .13f) else Color.White,
+        border = BorderStroke(1.dp, if (selected) typeColor.copy(alpha = .6f) else FitnessBorder)
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
@@ -581,12 +581,12 @@ private fun DayChip(
         ) {
             Text(
                 date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale("ar")),
-                color = if (selected) Color.White else FitnessMuted,
+                color = FitnessMuted,
                 fontSize = 9.sp
             )
             Text(
                 "${date.dayOfMonth}",
-                color = if (selected) Color.White else FitnessNavy,
+                color = FitnessNavy,
                 fontWeight = FontWeight.Black
             )
             Text(
@@ -596,7 +596,7 @@ private fun DayChip(
                     completed -> "✓"
                     else -> "$done/$target"
                 },
-                color = if (selected) Color.White.copy(alpha = .78f) else typeColor,
+                color = FitnessNavy,
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Bold
             )
