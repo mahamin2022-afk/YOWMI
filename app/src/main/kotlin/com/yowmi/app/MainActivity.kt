@@ -1827,17 +1827,12 @@ private fun formatTime(time: LocalTime): String {
     return String.format(Locale("ar"), "%d:%02d %s", hour, time.minute, period)
 }
 
-private fun taskColor(task: RoutineTask): Color = when (task.progressGroup ?: task.id) {
+private fun taskColor(task: RoutineTask): Color = when (task.progressGroup) {
     "workout" -> SpeakingOrange
     "quran" -> VocabularyGreen
-    "turkish", "turkish1", "turkish2" -> GrammarBlue
+    "turkish" -> GrammarBlue
     "work" -> MemoryPurple
-    "cleaning" -> Teal
-    "husband" -> AccentPink
-    "shower", "care", "scrub" -> ListeningCyan
-    "need_prayer", "dhikr1", "dhikr2", "tahajjud" -> PronunciationRed
-    "coffee", "breakfast", "lunch" -> PracticeAmber
-    else -> Navy
+    else -> Teal
 }
 
 private fun iconFor(task: RoutineTask): ImageVector = when (task.progressGroup ?: task.id) {
