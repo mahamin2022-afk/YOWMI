@@ -63,14 +63,14 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 private val TurkishNavy = YowmiPalette.Text
-private val TurkishBlue = YowmiPalette.Lavender
-private val TurkishTeal = YowmiPalette.Mint
-private val TurkishPink = YowmiPalette.Pink
-private val TurkishGreen = YowmiPalette.Mint
-private val TurkishPurple = YowmiPalette.Berry
-private val TurkishOrange = YowmiPalette.Coral
+private val TurkishBlue = YowmiPalette.GrammarBlue
+private val TurkishTeal = YowmiPalette.Secondary
+private val TurkishPink = YowmiPalette.Accent
+private val TurkishGreen = YowmiPalette.MintGreen
+private val TurkishPurple = YowmiPalette.OrchidPurple
+private val TurkishOrange = YowmiPalette.PeachOrange
 private val TurkishBg = YowmiPalette.Canvas
-private val TurkishMuted = YowmiPalette.Muted
+private val TurkishMuted = YowmiPalette.SecondaryText
 private val TurkishBorder = YowmiPalette.Border
 
 private data class GoalSwitchItem(
@@ -315,16 +315,16 @@ private fun TurkishHero(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Türkçe Yolculuğu ✦", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                    Text("A1 → A2 → B1 • منهاج واحد متدرج", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
+                    Text("Türkçe Yolculuğu ✦", color = TurkishNavy, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text("A1 → A2 → B1 • منهاج واحد متدرج", color = TurkishMuted, fontSize = 12.sp)
                 }
-                Surface(shape = RoundedCornerShape(17.dp), color = Color.White.copy(alpha = .12f)) {
+                Surface(shape = RoundedCornerShape(17.dp), color = TurkishNavy.copy(alpha = .12f)) {
                     Column(
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text("الحالي", color = Color.White.copy(alpha = .62f), fontSize = 8.sp)
-                        Text(currentLevel.id, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                        Text("الحالي", color = TurkishMuted, fontSize = 8.sp)
+                        Text(currentLevel.id, color = TurkishNavy, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -334,12 +334,12 @@ private fun TurkishHero(
                 progress = { overallRatio },
                 modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
                 color = TurkishTeal,
-                trackColor = Color.White.copy(alpha = .15f)
+                trackColor = YowmiPalette.Border
             )
             Spacer(Modifier.height(7.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("$completedLessons / 58 درس/مهارة", color = Color.White.copy(alpha = .76f), fontSize = 11.sp)
-                Text("${(overallRatio * 100).toInt()}%", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text("$completedLessons / 58 درس/مهارة", color = TurkishMuted, fontSize = 11.sp)
+                Text("${(overallRatio * 100).toInt()}%", color = TurkishNavy, fontWeight = FontWeight.Black, fontSize = 12.sp)
             }
 
             Spacer(Modifier.height(15.dp))
@@ -359,17 +359,17 @@ private fun TurkishHero(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
-                    color = Color.White.copy(alpha = .10f)
+                    color = TurkishNavy.copy(alpha = .10f)
                 ) {
                     Column(Modifier.padding(13.dp)) {
-                        Text("المهمة التعليمية التالية", color = Color.White.copy(alpha = .60f), fontSize = 10.sp)
+                        Text("المهمة التعليمية التالية", color = TurkishMuted, fontSize = 10.sp)
                         Text(
                             "${it.level} • ${it.localNumber}. ${it.title}",
-                            color = Color.White,
+                            color = TurkishNavy,
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )
-                        Text(it.arabicTitle, color = Color.White.copy(alpha = .72f), fontSize = 11.sp)
+                        Text(it.arabicTitle, color = TurkishMuted, fontSize = 11.sp)
                     }
                 }
             }
@@ -383,7 +383,7 @@ private fun HeroStat(text: String, color: Color) {
         Text(
             text,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            color = Color.White,
+            color = TurkishNavy,
             fontSize = 10.sp,
             fontWeight = FontWeight.Bold
         )
