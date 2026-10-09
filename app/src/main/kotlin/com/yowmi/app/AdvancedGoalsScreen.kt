@@ -281,8 +281,8 @@ private fun GoalSelectorChip(goal: GoalUi, selected: Boolean, percent: Int, onCl
     Surface(
         modifier = Modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        color = if (selected) goal.color else Color.White,
-        border = if (selected) null else BorderStroke(1.dp, GoalBorder)
+        color = if (selected) goal.color.copy(alpha = .12f) else Color.White,
+        border = BorderStroke(1.dp, if (selected) goal.color.copy(alpha = .6f) else GoalBorder)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
@@ -291,20 +291,20 @@ private fun GoalSelectorChip(goal: GoalUi, selected: Boolean, percent: Int, onCl
             Icon(
                 goal.icon,
                 null,
-                tint = if (selected) Color.White else goal.color,
+                tint = goal.color,
                 modifier = Modifier.size(19.dp)
             )
             Spacer(Modifier.width(7.dp))
             Column {
                 Text(
                     goal.title,
-                    color = if (selected) Color.White else GoalNavy,
+                    color = GoalNavy,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp
                 )
                 Text(
                     "$percent%",
-                    color = if (selected) Color.White.copy(alpha = .75f) else GoalMuted,
+                    color = GoalMuted,
                     fontSize = 9.sp
                 )
             }
