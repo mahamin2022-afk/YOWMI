@@ -66,17 +66,17 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val GoalNavy = Color(0xFF172B4D)
-private val GoalTeal = Color(0xFF00A9A5)
-private val GoalPink = Color(0xFFEC4B99)
-private val GoalBlue = Color(0xFF3478F6)
-private val GoalGreen = Color(0xFF00B88A)
-private val GoalPurple = Color(0xFF8B5CF6)
-private val GoalOrange = Color(0xFFFF7A00)
-private val GoalAmber = Color(0xFFFFB000)
-private val GoalBg = Color(0xFFF5F7FC)
-private val GoalMuted = Color(0xFF6E7A90)
-private val GoalBorder = Color(0xFFE5EAF2)
+private val GoalNavy = Color(0xFF344C49)
+private val GoalTeal = Color(0xFF4F9587)
+private val GoalPink = Color(0xFFBE829B)
+private val GoalBlue = Color(0xFF6E8EC5)
+private val GoalGreen = Color(0xFF4E9A80)
+private val GoalPurple = Color(0xFF827BAE)
+private val GoalOrange = Color(0xFFC88458)
+private val GoalAmber = Color(0xFFD9A35E)
+private val GoalBg = Color(0xFFF7F8F6)
+private val GoalMuted = Color(0xFF76847F)
+private val GoalBorder = Color(0xFFE4EBE7)
 
 private data class GoalUi(
     val kind: GoalKind,
