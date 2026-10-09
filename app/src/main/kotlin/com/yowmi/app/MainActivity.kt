@@ -120,20 +120,20 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 
 private val Navy = YowmiPalette.Text
-private val Teal = YowmiPalette.Berry
-private val AccentPink = YowmiPalette.Pink
-private val GrammarBlue = YowmiPalette.Lavender
-private val VocabularyGreen = YowmiPalette.Mint
-private val MemoryPurple = YowmiPalette.Berry
-private val SpeakingOrange = YowmiPalette.Coral
-private val ListeningCyan = YowmiPalette.Aqua
-private val PronunciationRed = YowmiPalette.Danger
-private val PracticeAmber = YowmiPalette.Gold
-private val WarningRed = YowmiPalette.Danger
-private val SuccessGreen = YowmiPalette.Success
+private val Teal = YowmiPalette.Secondary
+private val AccentPink = YowmiPalette.Accent
+private val GrammarBlue = YowmiPalette.GrammarBlue
+private val VocabularyGreen = YowmiPalette.MintGreen
+private val MemoryPurple = YowmiPalette.OrchidPurple
+private val SpeakingOrange = YowmiPalette.PeachOrange
+private val ListeningCyan = YowmiPalette.SkyCyan
+private val PronunciationRed = YowmiPalette.CoralPink
+private val PracticeAmber = YowmiPalette.WarmYellow
+private val WarningRed = YowmiPalette.SoftRed
+private val SuccessGreen = YowmiPalette.Emerald
 private val AppBackground = YowmiPalette.Canvas
-private val HeroSurface = YowmiPalette.RoseWash
-private val MutedText = YowmiPalette.Muted
+private val HeroSurface = YowmiPalette.PurpleSurface
+private val MutedText = YowmiPalette.SecondaryText
 private val SoftBorder = YowmiPalette.Border
 
 private data class ProgressDefinition(
@@ -174,7 +174,7 @@ class MainActivity : ComponentActivity() {
                 background = AppBackground,
                 surface = Color.White,
                 primaryContainer = HeroSurface,
-                secondaryContainer = Color(0xFFFFF0F7),
+                secondaryContainer = YowmiPalette.PinkSurface,
                 error = WarningRed
             )
             MaterialTheme(colorScheme = colors) {
@@ -297,7 +297,7 @@ private fun DockTab(
         modifier = modifier
             .height(59.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(if (selected) HeroSurface else Color.Transparent)
+            .background(if (selected) YowmiPalette.PurpleSurface else Color.Transparent)
             .clickable(onClick = onClick)
             .padding(vertical = 6.dp),
         verticalArrangement = Arrangement.Center,
@@ -306,13 +306,13 @@ private fun DockTab(
         Icon(
             item.icon,
             contentDescription = item.title,
-            tint = if (selected) Teal else MutedText,
+            tint = if (selected) YowmiPalette.Primary else MutedText,
             modifier = Modifier.size(22.dp)
         )
         Spacer(Modifier.height(3.dp))
         Text(
             item.title,
-            color = if (selected) Navy else MutedText,
+            color = if (selected) YowmiPalette.Primary else MutedText,
             fontSize = 10.sp,
             fontWeight = if (selected) FontWeight.Black else FontWeight.Medium,
             maxLines = 1
@@ -495,14 +495,14 @@ private fun TodayScreen(
                         verticalAlignment = Alignment.Top
                     ) {
                         Column {
-                            Text("يومي ✦", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                            Text(date.format(formatter), color = Color.White.copy(alpha = .72f), fontSize = 14.sp)
+                            Text("يومي ✦", color = Navy, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                            Text(date.format(formatter), color = MutedText, fontSize = 14.sp)
                         }
-                        Surface(shape = CircleShape, color = Color.White.copy(alpha = .20f)) {
+                        Surface(shape = CircleShape, color = Navy.copy(alpha = .20f)) {
                             Text(
                                 "${(progress * 100).toInt()}%",
                                 modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
-                                color = Color.White,
+                                color = Navy,
                                 fontWeight = FontWeight.Black
                             )
                         }
@@ -512,13 +512,13 @@ private fun TodayScreen(
                     LinearProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
-                        color = Color.White,
-                        trackColor = Color.White.copy(alpha = .20f)
+                        color = AccentPink,
+                        trackColor = YowmiPalette.Border
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "$doneCount من $totalCount مهمة منجزة • كل خطوة إلها قيمة",
-                        color = Color.White.copy(alpha = .88f),
+                        color = Navy,
                         fontSize = 12.sp
                     )
 
@@ -527,7 +527,7 @@ private fun TodayScreen(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(22.dp),
-                            color = Color.White.copy(alpha = .10f)
+                            color = Navy.copy(alpha = .10f)
                         ) {
                             Row(
                                 modifier = Modifier.padding(14.dp),
@@ -543,10 +543,10 @@ private fun TodayScreen(
                                 }
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text("المهمة التالية", color = Color.White.copy(alpha = .65f), fontSize = 11.sp)
-                                    Text(nextTask.title, color = Color.White, fontWeight = FontWeight.Bold)
+                                    Text("المهمة التالية", color = MutedText, fontSize = 11.sp)
+                                    Text(nextTask.title, color = Navy, fontWeight = FontWeight.Bold)
                                 }
-                                Text(formatTime(store.time(nextTask)), color = Color.White, fontWeight = FontWeight.Black)
+                                Text(formatTime(store.time(nextTask)), color = Navy, fontWeight = FontWeight.Black)
                             }
                         }
                     }
@@ -721,7 +721,7 @@ private fun TaskCard(
             }
             Button(
                 onClick = onToggle,
-                colors = ButtonDefaults.buttonColors(containerColor = if (done) SuccessGreen else color),
+                colors = ButtonDefaults.buttonColors(containerColor = if (done) SuccessGreen else color, contentColor = Navy),
                 shape = RoundedCornerShape(18.dp),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
             ) {
@@ -892,7 +892,7 @@ private fun GoalsScreen(
                                         when {
                                             complete -> definition.color
                                             partial -> definition.color.copy(alpha = .22f)
-                                            else -> Color(0xFFF8EEF6)
+                                            else -> YowmiPalette.PurpleSurface
                                         },
                                         CircleShape
                                     ),
@@ -929,7 +929,7 @@ private fun MilestoneRoadmap(progress: MonthlyProgress, color: Color) {
                     Box(
                         modifier = Modifier
                             .size(42.dp)
-                            .background(if (reached) color else Color(0xFFF8EEF6), CircleShape)
+                            .background(if (reached) color else YowmiPalette.PurpleSurface, CircleShape)
                             .border(
                                 2.dp,
                                 if (reached) color else Color(0xFFF0DDEB),
@@ -1167,7 +1167,7 @@ private fun SelectedDaySummary(store: RoutineStore, date: LocalDate, today: Loca
                 progress = { ratio },
                 modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
                 color = if (ratio >= 1f) SuccessGreen else GrammarBlue,
-                trackColor = Color(0xFFF8EEF6)
+                trackColor = YowmiPalette.PurpleSurface
             )
             Spacer(Modifier.height(11.dp))
             tasks.forEach { task ->
@@ -1179,7 +1179,7 @@ private fun SelectedDaySummary(store: RoutineStore, date: LocalDate, today: Loca
                     Box(
                         modifier = Modifier
                             .size(26.dp)
-                            .background(if (checked) SuccessGreen else Color(0xFFF8EEF6), CircleShape),
+                            .background(if (checked) SuccessGreen else YowmiPalette.PurpleSurface, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         if (checked) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(16.dp))
@@ -1477,7 +1477,7 @@ private fun TaskEditorDialog(
             if (category == "goal") {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = HeroSurface,
+                    color = YowmiPalette.PurpleSurface,
                     shape = RoundedCornerShape(17.dp)
                 ) {
                     Column(Modifier.padding(13.dp)) {
@@ -1636,7 +1636,7 @@ private fun TaskEditorDialog(
                 enabled = title.isNotBlank(),
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(19.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Teal)
+                colors = ButtonDefaults.buttonColors(containerColor = AccentPink, contentColor = Navy)
             ) {
                 Icon(Icons.Rounded.Check, null, modifier = Modifier.size(19.dp))
                 Spacer(Modifier.width(8.dp))
@@ -1663,19 +1663,21 @@ private fun EditorCategoryCard(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val categoryColor = if (title == "هدف") YowmiPalette.Goal else YowmiPalette.NormalTask
+    val categorySurface = if (title == "هدف") YowmiPalette.PurpleSurface else YowmiPalette.BlueSurface
     Surface(
         modifier = modifier
             .height(100.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        color = if (selected) HeroSurface else Color.White,
-        border = BorderStroke(1.5.dp, if (selected) Teal else SoftBorder)
+        color = if (selected) categorySurface else Color.White,
+        border = BorderStroke(1.5.dp, if (selected) categoryColor else SoftBorder)
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
-            Icon(icon, null, tint = if (selected) Teal else MutedText, modifier = Modifier.size(22.dp))
+            Icon(icon, null, tint = categoryColor, modifier = Modifier.size(22.dp))
             Text(title, color = Navy, fontSize = 13.sp, fontWeight = FontWeight.Black)
             Text(subtitle, color = MutedText, fontSize = 10.sp, maxLines = 2)
         }
@@ -1727,7 +1729,7 @@ private fun PermissionWarningCard(context: Context) {
     val notificationOk = hasNotificationPermission(context)
     val exactOk = hasExactAlarmPermission(context)
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF2E8)),
+        colors = CardDefaults.cardColors(containerColor = YowmiPalette.PeachSurface),
         shape = RoundedCornerShape(24.dp),
         border = BorderStroke(1.dp, SpeakingOrange.copy(alpha = .30f))
     ) {
@@ -1831,11 +1833,11 @@ private fun formatTime(time: LocalTime): String {
 }
 
 private fun taskColor(task: RoutineTask): Color = when (task.progressGroup) {
-    "workout" -> SpeakingOrange
-    "quran" -> VocabularyGreen
-    "turkish" -> GrammarBlue
-    "work" -> MemoryPurple
-    else -> Teal
+    "workout" -> YowmiPalette.Fitness
+    "quran" -> YowmiPalette.Habit
+    "turkish" -> YowmiPalette.Learning
+    "work" -> YowmiPalette.Goal
+    else -> YowmiPalette.NormalTask
 }
 
 private fun iconFor(task: RoutineTask): ImageVector = when (task.progressGroup ?: task.id) {
