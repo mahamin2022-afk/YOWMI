@@ -11,8 +11,8 @@ android {
         applicationId = "com.yowmi.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.6"
+        versionCode = 9
+        versionName = "1.8"
     }
 
     compileOptions {
