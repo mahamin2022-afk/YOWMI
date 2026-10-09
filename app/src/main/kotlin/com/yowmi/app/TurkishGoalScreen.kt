@@ -1020,22 +1020,22 @@ private fun CourseForecastCard(
 ) {
     Card(
         shape = RoundedCornerShape(27.dp),
-        colors = CardDefaults.cardColors(containerColor = TurkishNavy)
+        colors = CardDefaults.cardColors(containerColor = YowmiPalette.PurpleSurface)
     ) {
         Column(Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Flag, null, tint = TurkishPink)
                 Spacer(Modifier.width(8.dp))
-                Text("توقع الوصول", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text("توقع الوصول", color = TurkishNavy, fontSize = 18.sp, fontWeight = FontWeight.Black)
             }
             Spacer(Modifier.height(10.dp))
 
             if (sprint.remainingCourseLessons == 0 && turkishLevels.all { store.isLevelComplete(it) }) {
-                Text("A1 + A2 + B1 مكتملين بالكامل.", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("A1 + A2 + B1 مكتملين بالكامل.", color = TurkishNavy, fontWeight = FontWeight.Bold)
             } else {
                 Text(
                     "باقي ${sprint.remainingCourseLessons} درس/مهارة من أصل 58. بسرعة ${sprint.targetLessons} درس بالشهر، تحتاجي تقريبًا ${sprint.estimatedMonthsRemaining} شهر/أشهر للدروس، إضافة للمراجعات والاختبارات.",
-                    color = Color.White.copy(alpha = .82f),
+                    color = TurkishMuted,
                     fontSize = 12.sp
                 )
                 Spacer(Modifier.height(8.dp))
