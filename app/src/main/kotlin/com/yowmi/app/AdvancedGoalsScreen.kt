@@ -66,17 +66,17 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val GoalNavy = Color(0xFF344C49)
-private val GoalTeal = Color(0xFF4F9587)
-private val GoalPink = Color(0xFFBE829B)
-private val GoalBlue = Color(0xFF6E8EC5)
-private val GoalGreen = Color(0xFF4E9A80)
-private val GoalPurple = Color(0xFF827BAE)
-private val GoalOrange = Color(0xFFC88458)
-private val GoalAmber = Color(0xFFD9A35E)
-private val GoalBg = Color(0xFFF7F8F6)
-private val GoalMuted = Color(0xFF76847F)
-private val GoalBorder = Color(0xFFE4EBE7)
+private val GoalNavy = YowmiPalette.Text
+private val GoalTeal = YowmiPalette.Berry
+private val GoalPink = YowmiPalette.Pink
+private val GoalBlue = YowmiPalette.Lavender
+private val GoalGreen = YowmiPalette.Mint
+private val GoalPurple = YowmiPalette.Berry
+private val GoalOrange = YowmiPalette.Coral
+private val GoalAmber = YowmiPalette.Gold
+private val GoalBg = YowmiPalette.Canvas
+private val GoalMuted = YowmiPalette.Muted
+private val GoalBorder = YowmiPalette.Border
 
 private data class GoalUi(
     val kind: GoalKind,
@@ -229,8 +229,11 @@ internal fun AdvancedGoalsScreen(
 @Composable
 private fun GameProfileHeader(level: Int, xp: Int, overallProgress: Float) {
     Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(YowmiPalette.GoalsHero, RoundedCornerShape(32.dp)),
         shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(containerColor = GoalNavy)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -244,7 +247,7 @@ private fun GameProfileHeader(level: Int, xp: Int, overallProgress: Float) {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("رحلة أهدافي", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text("رحلة أهدافي ✦", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
                     Text("كل إنجاز صغير يفتح مرحلة جديدة", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
                 }
                 Surface(shape = RoundedCornerShape(16.dp), color = Color.White.copy(alpha = .12f)) {
@@ -346,7 +349,7 @@ private fun GoalJourneyHero(
                 progress = { overview.ratio },
                 modifier = Modifier.fillMaxWidth().height(10.dp).clip(CircleShape),
                 color = goal.color,
-                trackColor = goal.color.copy(alpha = .10f)
+                trackColor = goal.color.copy(alpha = .12f)
             )
             Spacer(Modifier.height(13.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -403,7 +406,7 @@ private fun StageRoadmap(stageIndex: Int, color: Color, labels: List<String>) {
                                 when {
                                     reached -> color
                                     current -> color.copy(alpha = .15f)
-                                    else -> Color(0xFFF0F2F7)
+                                    else -> YowmiPalette.LilacWash
                                 },
                                 CircleShape
                             )
@@ -618,7 +621,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.turkishItems(
             Card(
                 shape = RoundedCornerShape(27.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (previousComplete) Color.White else Color(0xFFF0F2F7)
+                    containerColor = if (previousComplete) Color.White else YowmiPalette.LilacWash
                 ),
                 border = BorderStroke(1.dp, if (stage == currentStage) color.copy(alpha = .35f) else GoalBorder)
             ) {
@@ -631,7 +634,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.turkishItems(
                                     when {
                                         stageDone -> color
                                         previousComplete -> color.copy(alpha = .12f)
-                                        else -> Color(0xFFE1E5EC)
+                                        else -> YowmiPalette.LilacWash
                                     },
                                     CircleShape
                                 ),
@@ -831,7 +834,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.workItems(
 
             Card(
                 shape = RoundedCornerShape(27.dp),
-                colors = CardDefaults.cardColors(containerColor = if (previousComplete) Color.White else Color(0xFFF0F2F7)),
+                colors = CardDefaults.cardColors(containerColor = if (previousComplete) Color.White else YowmiPalette.LilacWash),
                 border = BorderStroke(1.dp, GoalBorder)
             ) {
                 Column(Modifier.padding(16.dp)) {
@@ -839,7 +842,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.workItems(
                         Box(
                             modifier = Modifier
                                 .size(40.dp)
-                                .background(if (previousComplete) color.copy(alpha=.12f) else Color(0xFFE1E5EC), CircleShape),
+                                .background(if (previousComplete) color.copy(alpha=.12f) else YowmiPalette.LilacWash, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             if (previousComplete) Text("$stage", color = color, fontWeight = FontWeight.Black)

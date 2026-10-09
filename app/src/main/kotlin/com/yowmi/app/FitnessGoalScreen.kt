@@ -63,18 +63,18 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val FitnessNavy = Color(0xFF344C49)
-private val FitnessOrange = Color(0xFFC88458)
-private val FitnessTeal = Color(0xFF4F9587)
-private val FitnessPink = Color(0xFFBE829B)
-private val FitnessBlue = Color(0xFF6E8EC5)
-private val FitnessGreen = Color(0xFF4E9A80)
-private val FitnessPurple = Color(0xFF827BAE)
-private val FitnessAmber = Color(0xFFD9A35E)
-private val FitnessBg = Color(0xFFF7F8F6)
-private val FitnessMuted = Color(0xFF76847F)
-private val FitnessBorder = Color(0xFFE4EBE7)
-private val FitnessDanger = Color(0xFFC76568)
+private val FitnessNavy = YowmiPalette.Text
+private val FitnessOrange = YowmiPalette.Coral
+private val FitnessTeal = YowmiPalette.Mint
+private val FitnessPink = YowmiPalette.Pink
+private val FitnessBlue = YowmiPalette.Lavender
+private val FitnessGreen = YowmiPalette.Mint
+private val FitnessPurple = YowmiPalette.Berry
+private val FitnessAmber = YowmiPalette.Gold
+private val FitnessBg = YowmiPalette.Canvas
+private val FitnessMuted = YowmiPalette.Muted
+private val FitnessBorder = YowmiPalette.Border
+private val FitnessDanger = YowmiPalette.Danger
 
 private data class FitnessGoalSwitch(
     val id: String,
@@ -301,8 +301,11 @@ private fun FitnessHero(
     val format = DateTimeFormatter.ofPattern("d MMM", Locale("ar"))
 
     Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(YowmiPalette.FitnessHero, RoundedCornerShape(32.dp)),
         shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(containerColor = FitnessNavy)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
         Column(Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -317,7 +320,7 @@ private fun FitnessHero(
 
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("رحلة الجسم الأقوى", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text("رحلة الجسم الأقوى ✦", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Black)
                     Text("برنامج منزلي • 8 أسابيع", color = Color.White.copy(alpha = .68f), fontSize = 12.sp)
                 }
 
@@ -471,7 +474,7 @@ private fun PhaseRoadmap(
                             .background(
                                 if (currentWeek > phase.weeks.last) FitnessGreen
                                 else if (currentWeek in phase.weeks) FitnessOrange
-                                else Color(0xFFF0F2F7),
+                                else YowmiPalette.LilacWash,
                                 CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -502,7 +505,7 @@ private fun PhaseRoadmap(
                             Surface(
                                 modifier = Modifier.clickable { onWeekSelected(week) },
                                 shape = CircleShape,
-                                color = if (selectedWeek == week) FitnessOrange else Color(0xFFF0F2F7)
+                                color = if (selectedWeek == week) FitnessOrange else YowmiPalette.LilacWash
                             ) {
                                 Text(
                                     "$week",
