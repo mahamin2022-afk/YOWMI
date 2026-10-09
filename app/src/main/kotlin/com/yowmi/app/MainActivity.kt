@@ -25,10 +25,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -41,6 +44,8 @@ import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CleaningServices
@@ -68,6 +73,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
@@ -110,22 +118,22 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlinx.coroutines.delay
 
-private val Navy = Color(0xFF172B4D)
-private val Teal = Color(0xFF00A9A5)
-private val AccentPink = Color(0xFFEC4B99)
-private val GrammarBlue = Color(0xFF3478F6)
-private val VocabularyGreen = Color(0xFF00B88A)
-private val MemoryPurple = Color(0xFF8B5CF6)
-private val SpeakingOrange = Color(0xFFFF7A00)
-private val ListeningCyan = Color(0xFF00B7C7)
-private val PronunciationRed = Color(0xFFF43F5E)
-private val PracticeAmber = Color(0xFFFFB000)
-private val WarningRed = Color(0xFFE5484D)
-private val SuccessGreen = Color(0xFF16A66A)
-private val AppBackground = Color(0xFFF5F7FC)
-private val HeroSurface = Color(0xFFEAF0F9)
-private val MutedText = Color(0xFF6E7A90)
-private val SoftBorder = Color(0xFFE5EAF2)
+private val Navy = Color(0xFF344C49)
+private val Teal = Color(0xFF4F9587)
+private val AccentPink = Color(0xFFBE829B)
+private val GrammarBlue = Color(0xFF6E8EC5)
+private val VocabularyGreen = Color(0xFF4E9A80)
+private val MemoryPurple = Color(0xFF827BAE)
+private val SpeakingOrange = Color(0xFFC88458)
+private val ListeningCyan = Color(0xFF66A6AC)
+private val PronunciationRed = Color(0xFFC77C86)
+private val PracticeAmber = Color(0xFFD9A35E)
+private val WarningRed = Color(0xFFC76568)
+private val SuccessGreen = Color(0xFF4E9B7B)
+private val AppBackground = Color(0xFFF7F8F6)
+private val HeroSurface = Color(0xFFEDF3EF)
+private val MutedText = Color(0xFF76847F)
+private val SoftBorder = Color(0xFFE4EBE7)
 
 private data class ProgressDefinition(
     val id: String,
@@ -165,7 +173,7 @@ class MainActivity : ComponentActivity() {
                 background = AppBackground,
                 surface = Color.White,
                 primaryContainer = HeroSurface,
-                secondaryContainer = Color(0xFFDDF7F5),
+                secondaryContainer = Color(0xFFE8F5F0),
                 error = WarningRed
             )
             MaterialTheme(colorScheme = colors) {
@@ -200,6 +208,119 @@ class MainActivity : ComponentActivity() {
 
 private enum class Screen { Today, Month, Goals, Schedule }
 
+private data class DockDestination(val screen: Screen, val title: String, val icon: ImageVector)
+
+private val dockDestinations = listOf(
+    DockDestination(Screen.Today, "اليوم", Icons.Rounded.Home),
+    DockDestination(Screen.Month, "التقويم", Icons.Rounded.CalendarMonth),
+    DockDestination(Screen.Goals, "أهدافي", Icons.Rounded.Flag),
+    DockDestination(Screen.Schedule, "الجدول", Icons.Rounded.Schedule)
+)
+
+@Composable
+private fun ModernNavigationDock(
+    selected: Screen,
+    onNavigate: (Screen) -> Unit,
+    onAdd: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 9.dp),
+        shape = RoundedCornerShape(28.dp),
+        color = Color.White,
+        tonalElevation = 4.dp,
+        shadowElevation = 10.dp,
+        border = BorderStroke(1.dp, SoftBorder)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 7.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            DockTab(
+                modifier = Modifier.weight(1f),
+                item = dockDestinations[0],
+                selected = selected == Screen.Today,
+                onClick = { onNavigate(Screen.Today) }
+            )
+            DockTab(
+                modifier = Modifier.weight(1f),
+                item = dockDestinations[1],
+                selected = selected == Screen.Month,
+                onClick = { onNavigate(Screen.Month) }
+            )
+            Box(Modifier.weight(.92f), contentAlignment = Alignment.Center) {
+                Surface(
+                    modifier = Modifier
+                        .size(53.dp)
+                        .clickable(onClick = onAdd),
+                    shape = RoundedCornerShape(19.dp),
+                    color = Teal,
+                    shadowElevation = 4.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Rounded.Add,
+                            contentDescription = "إضافة مهمة أو هدف",
+                            tint = Color.White,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    }
+                }
+            }
+            DockTab(
+                modifier = Modifier.weight(1f),
+                item = dockDestinations[2],
+                selected = selected == Screen.Goals,
+                onClick = { onNavigate(Screen.Goals) }
+            )
+            DockTab(
+                modifier = Modifier.weight(1f),
+                item = dockDestinations[3],
+                selected = selected == Screen.Schedule,
+                onClick = { onNavigate(Screen.Schedule) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DockTab(
+    modifier: Modifier,
+    item: DockDestination,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .height(59.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(if (selected) HeroSurface else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(vertical = 6.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            item.icon,
+            contentDescription = item.title,
+            tint = if (selected) Teal else MutedText,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            item.title,
+            color = if (selected) Navy else MutedText,
+            fontSize = 10.sp,
+            fontWeight = if (selected) FontWeight.Black else FontWeight.Medium,
+            maxLines = 1
+        )
+    }
+}
+
 @Composable
 private fun YowmiApp() {
     val context = LocalContext.current
@@ -228,47 +349,15 @@ private fun YowmiApp() {
 
     Scaffold(
         containerColor = AppBackground,
-        floatingActionButton = {
-            if (screen == Screen.Today || screen == Screen.Schedule) {
-                ExtendedFloatingActionButton(
-                    onClick = {
-                        editingTask = null
-                        showTaskEditor = true
-                    },
-                    containerColor = Navy,
-                    contentColor = Color.White,
-                    icon = { Icon(Icons.Rounded.Add, null) },
-                    text = { Text("مهمة جديدة", fontWeight = FontWeight.Bold) }
-                )
-            }
-        },
         bottomBar = {
-            NavigationBar(containerColor = Color.White) {
-                NavigationBarItem(
-                    selected = screen == Screen.Today,
-                    onClick = { screen = Screen.Today },
-                    icon = { Icon(Icons.Rounded.Home, null) },
-                    label = { Text("اليوم") }
-                )
-                NavigationBarItem(
-                    selected = screen == Screen.Month,
-                    onClick = { screen = Screen.Month },
-                    icon = { Icon(Icons.Rounded.CalendarMonth, null) },
-                    label = { Text("الشهر") }
-                )
-                NavigationBarItem(
-                    selected = screen == Screen.Goals,
-                    onClick = { screen = Screen.Goals },
-                    icon = { Icon(Icons.Rounded.Flag, null) },
-                    label = { Text("الأهداف") }
-                )
-                NavigationBarItem(
-                    selected = screen == Screen.Schedule,
-                    onClick = { screen = Screen.Schedule },
-                    icon = { Icon(Icons.Rounded.Schedule, null) },
-                    label = { Text("الجدول") }
-                )
-            }
+            ModernNavigationDock(
+                selected = screen,
+                onNavigate = { screen = it },
+                onAdd = {
+                    editingTask = null
+                    showTaskEditor = true
+                }
+            )
         }
     ) { padding ->
         when (screen) {
@@ -520,7 +609,7 @@ private fun TodayScreen(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(22.dp),
-                color = Color(0xFFE7F7F5)
+                color = Color(0xFFE8F5F0)
             ) {
                 Text(
                     "بعد 12:00 ليلًا يبدأ يوم جديد تلقائيًا. الأيام السابقة تبقى محفوظة بالتقويم، والمهام غير المنجزة لا تنتقل كأنها منجزة.",
@@ -610,7 +699,13 @@ private fun TaskCard(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(task.title, color = Navy, fontWeight = FontWeight.Black)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(task.title, color = Navy, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f, fill = false))
+                    if (task.progressGroup != null) {
+                        Spacer(Modifier.width(5.dp))
+                        Text("هدف", color = Teal, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
                 if (task.subtitle.isNotBlank()) {
                     Text(task.subtitle, color = MutedText, fontSize = 12.sp)
                 }
@@ -1252,7 +1347,11 @@ private fun EditableTaskRow(
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(task.title, color = Navy, fontWeight = FontWeight.Black)
-                    Text(repeatLabel, color = MutedText, fontSize = 11.sp)
+                    Text(
+                        (if (task.progressGroup != null) "هدف • " else "مهمة عادية • ") + repeatLabel,
+                        color = MutedText,
+                        fontSize = 11.sp
+                    )
                 }
 
                 IconButton(onClick = onEdit) {
@@ -1277,6 +1376,7 @@ private fun EditableTaskRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TaskEditorDialog(
     task: RoutineTask?,
@@ -1288,6 +1388,10 @@ private fun TaskEditorDialog(
     var subtitle by remember(task?.id) { mutableStateOf(task?.subtitle.orEmpty()) }
     var time by remember(task?.id) { mutableStateOf(task?.defaultTime ?: LocalTime.of(12, 0)) }
     var section by remember(task?.id) { mutableStateOf(task?.section ?: "الظهر") }
+    var category by remember(task?.id) {
+        mutableStateOf(if (task?.progressGroup != null) "goal" else "normal")
+    }
+    var goalGroup by remember(task?.id) { mutableStateOf(task?.progressGroup ?: "turkish") }
     var repeatType by remember(task?.id) {
         mutableStateOf(
             when (task?.repeatRule) {
@@ -1298,114 +1402,216 @@ private fun TaskEditorDialog(
         )
     }
     var weeklyDays by remember(task?.id) {
-        mutableStateOf(
-            (task?.repeatRule as? RepeatRule.Weekly)?.days ?: setOf(DayOfWeek.MONDAY)
-        )
+        mutableStateOf((task?.repeatRule as? RepeatRule.Weekly)?.days ?: setOf(DayOfWeek.MONDAY))
     }
-    var progressGroup by remember(task?.id) { mutableStateOf(task?.progressGroup) }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(if (task == null) "مهمة جديدة" else "تعديل المهمة", color = Navy, fontWeight = FontWeight.Black) },
-        text = {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(11.dp)) {
-                item {
-                    OutlinedTextField(
-                        value = title,
-                        onValueChange = { title = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("اسم المهمة") },
-                        singleLine = true
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Color.White,
+        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 11.dp, bottom = 8.dp)
+                    .size(width = 38.dp, height = 5.dp)
+                    .background(SoftBorder, CircleShape)
+            )
+        }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 670.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 21.dp)
+                .padding(bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        if (task == null) "إضافة جديدة" else "تعديل العنصر",
+                        color = Navy,
+                        fontSize = 25.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        "رتّبي يومك بطريقتك",
+                        color = MutedText,
+                        fontSize = 12.sp
                     )
                 }
-                item {
-                    OutlinedTextField(
-                        value = subtitle,
-                        onValueChange = { subtitle = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("ملاحظة قصيرة — اختياري") },
-                        maxLines = 2
-                    )
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Rounded.Close, "إغلاق", tint = MutedText)
                 }
-                item {
-                    OutlinedButton(
-                        onClick = {
-                            TimePickerDialog(
-                                context,
-                                { _, hour, minute -> time = LocalTime.of(hour, minute) },
-                                time.hour,
-                                time.minute,
-                                true
-                            ).show()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Rounded.AccessTime, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(formatTime(time))
-                    }
-                }
-                item {
-                    Text("فترة اليوم", color = Navy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        items(listOf("الصباح", "الظهر", "المساء", "قبل النوم", "قبل الفجر")) { item ->
-                            FilterChip(
-                                selected = section == item,
-                                onClick = { section = item },
-                                label = { Text(item) }
-                            )
-                        }
-                    }
-                }
-                item {
-                    Text("التكرار", color = Navy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        FilterChip(selected = repeatType == "daily", onClick = { repeatType = "daily" }, label = { Text("يومي") })
-                        FilterChip(selected = repeatType == "alternate", onClick = { repeatType = "alternate" }, label = { Text("يوم إيه/لا") })
-                        FilterChip(selected = repeatType == "weekly", onClick = { repeatType = "weekly" }, label = { Text("أيام محددة") })
-                    }
-                }
-                if (repeatType == "weekly") {
-                    item {
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            items(DayOfWeek.entries) { day ->
+            }
+
+            Text("نوع العنصر", color = Navy, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                EditorCategoryCard(
+                    modifier = Modifier.weight(1f),
+                    title = "مهمة عادية",
+                    subtitle = "متابعة ضمن جدول اليوم",
+                    icon = Icons.Rounded.CheckCircle,
+                    selected = category == "normal",
+                    onClick = { category = "normal" }
+                )
+                EditorCategoryCard(
+                    modifier = Modifier.weight(1f),
+                    title = "هدف",
+                    subtitle = "خطوة مرتبطة بهدف",
+                    icon = Icons.Rounded.Flag,
+                    selected = category == "goal",
+                    onClick = { category = "goal" }
+                )
+            }
+
+            if (category == "goal") {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = HeroSurface,
+                    shape = RoundedCornerShape(17.dp)
+                ) {
+                    Column(Modifier.padding(13.dp)) {
+                        Text(
+                            "اربطي الخطوة بالهدف",
+                            color = Navy,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            "كل مرة تكمّلي المهمة، رح تدخل ضمن متابعة هذا الهدف.",
+                            color = MutedText,
+                            fontSize = 11.sp
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(progressDefinitions) { goal ->
                                 FilterChip(
-                                    selected = day in weeklyDays,
-                                    onClick = {
-                                        weeklyDays = if (day in weeklyDays) weeklyDays - day else weeklyDays + day
+                                    selected = goalGroup == goal.id,
+                                    onClick = { goalGroup = goal.id },
+                                    label = { Text(goal.title, fontSize = 11.sp) },
+                                    leadingIcon = {
+                                        Icon(goal.icon, null, modifier = Modifier.size(17.dp))
                                     },
-                                    label = { Text(shortArabicDay(day)) }
+                                    shape = RoundedCornerShape(18.dp)
                                 )
                             }
                         }
                     }
                 }
+            }
+
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(if (category == "goal") "عنوان خطوة الهدف" else "اسم المهمة") },
+                placeholder = { Text("شو بدك تنجزي؟") },
+                singleLine = true,
+                shape = RoundedCornerShape(19.dp)
+            )
+
+            OutlinedTextField(
+                value = subtitle,
+                onValueChange = { subtitle = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("تفاصيل إضافية (اختياري)") },
+                maxLines = 3,
+                shape = RoundedCornerShape(19.dp)
+            )
+
+            Text("الوقت", color = Navy, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        TimePickerDialog(
+                            context,
+                            { _, hour, minute -> time = LocalTime.of(hour, minute) },
+                            time.hour,
+                            time.minute,
+                            true
+                        ).show()
+                    },
+                color = HeroSurface,
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Rounded.AccessTime, null, tint = Teal)
+                    Spacer(Modifier.width(10.dp))
+                    Text(formatTime(time), modifier = Modifier.weight(1f), color = Navy, fontWeight = FontWeight.Bold)
+                    Text("تغيير الوقت", color = Teal, fontSize = 12.sp)
+                }
+            }
+
+            Text("التكرار", color = Navy, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 item {
-                    Text("هل تدخل ضمن هدف؟", color = Navy, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        item {
-                            FilterChip(
-                                selected = progressGroup == null,
-                                onClick = { progressGroup = null },
-                                label = { Text("بدون هدف") }
-                            )
-                        }
-                        items(progressDefinitions) { goal ->
-                            FilterChip(
-                                selected = progressGroup == goal.id,
-                                onClick = { progressGroup = goal.id },
-                                label = { Text(goal.title) }
-                            )
-                        }
+                    FilterChip(
+                        selected = repeatType == "daily",
+                        onClick = { repeatType = "daily" },
+                        label = { Text("كل يوم") },
+                        shape = CircleShape
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = repeatType == "alternate",
+                        onClick = { repeatType = "alternate" },
+                        label = { Text("يوم إيه ويوم لا") },
+                        shape = CircleShape
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = repeatType == "weekly",
+                        onClick = { repeatType = "weekly" },
+                        label = { Text("أيام محددة") },
+                        shape = CircleShape
+                    )
+                }
+            }
+
+            if (repeatType == "weekly") {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    items(DayOfWeek.entries) { day ->
+                        FilterChip(
+                            selected = day in weeklyDays,
+                            onClick = {
+                                weeklyDays = if (day in weeklyDays) weeklyDays - day else weeklyDays + day
+                            },
+                            label = { Text(shortArabicDay(day)) },
+                            shape = CircleShape
+                        )
                     }
                 }
             }
-        },
-        confirmButton = {
+
+            Text("فترة اليوم", color = Navy, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                items(listOf("الصباح", "الظهر", "المساء", "قبل النوم", "قبل الفجر")) { period ->
+                    FilterChip(
+                        selected = section == period,
+                        onClick = { section = period },
+                        label = { Text(period) },
+                        shape = CircleShape
+                    )
+                }
+            }
+
             Button(
                 onClick = {
                     if (title.isBlank()) return@Button
-                    val rule = when (repeatType) {
+                    val repeatRule = when (repeatType) {
                         "alternate" -> RepeatRule.AlternateDays
                         "weekly" -> RepeatRule.Weekly(weeklyDays.ifEmpty { setOf(DayOfWeek.MONDAY) })
                         else -> RepeatRule.Daily
@@ -1417,18 +1623,60 @@ private fun TaskEditorDialog(
                             subtitle = subtitle.trim(),
                             defaultTime = time,
                             section = section,
-                            repeatRule = rule,
-                            progressGroup = progressGroup,
+                            repeatRule = repeatRule,
+                            progressGroup = if (category == "goal") goalGroup else null,
                             isCustom = task?.isCustom ?: true
                         ),
                         time
                     )
                 },
-                enabled = title.isNotBlank()
-            ) { Text("حفظ") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("إلغاء") } }
-    )
+                enabled = title.isNotBlank(),
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(19.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Teal)
+            ) {
+                Icon(Icons.Rounded.Check, null, modifier = Modifier.size(19.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(if (task == null) "إضافة للجدول" else "حفظ التعديلات", fontWeight = FontWeight.Black)
+            }
+
+            Text(
+                "يمكنك تعديل المهمة أو حذفها لاحقًا من قسم الجدول.",
+                modifier = Modifier.fillMaxWidth(),
+                color = MutedText,
+                fontSize = 10.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun EditorCategoryCard(
+    modifier: Modifier,
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = modifier
+            .height(100.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        color = if (selected) HeroSurface else Color.White,
+        border = BorderStroke(1.5.dp, if (selected) Teal else SoftBorder)
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
+        ) {
+            Icon(icon, null, tint = if (selected) Teal else MutedText, modifier = Modifier.size(22.dp))
+            Text(title, color = Navy, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(subtitle, color = MutedText, fontSize = 10.sp, maxLines = 2)
+        }
+    }
 }
 
 @Composable
