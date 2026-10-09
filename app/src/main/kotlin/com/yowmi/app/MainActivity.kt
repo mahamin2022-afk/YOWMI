@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -227,6 +228,7 @@ private fun ModernNavigationDock(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .padding(horizontal = 14.dp, vertical = 9.dp),
         shape = RoundedCornerShape(30.dp),
         color = Color.White,
@@ -498,7 +500,7 @@ private fun TodayScreen(
                             Text("يومي ✦", color = Navy, fontSize = 30.sp, fontWeight = FontWeight.Black)
                             Text(date.format(formatter), color = MutedText, fontSize = 14.sp)
                         }
-                        Surface(shape = CircleShape, color = Navy.copy(alpha = .20f)) {
+                        Surface(shape = CircleShape, color = YowmiPalette.Surface.copy(alpha = .85f)) {
                             Text(
                                 "${(progress * 100).toInt()}%",
                                 modifier = Modifier.padding(horizontal = 13.dp, vertical = 9.dp),
