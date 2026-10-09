@@ -63,18 +63,18 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
-private val FitnessNavy = Color(0xFF172B4D)
-private val FitnessOrange = Color(0xFFFF7A00)
-private val FitnessTeal = Color(0xFF00A9A5)
-private val FitnessPink = Color(0xFFEC4B99)
-private val FitnessBlue = Color(0xFF3478F6)
-private val FitnessGreen = Color(0xFF00B88A)
-private val FitnessPurple = Color(0xFF8B5CF6)
-private val FitnessAmber = Color(0xFFFFB000)
-private val FitnessBg = Color(0xFFF5F7FC)
-private val FitnessMuted = Color(0xFF6E7A90)
-private val FitnessBorder = Color(0xFFE5EAF2)
-private val FitnessDanger = Color(0xFFE5484D)
+private val FitnessNavy = Color(0xFF344C49)
+private val FitnessOrange = Color(0xFFC88458)
+private val FitnessTeal = Color(0xFF4F9587)
+private val FitnessPink = Color(0xFFBE829B)
+private val FitnessBlue = Color(0xFF6E8EC5)
+private val FitnessGreen = Color(0xFF4E9A80)
+private val FitnessPurple = Color(0xFF827BAE)
+private val FitnessAmber = Color(0xFFD9A35E)
+private val FitnessBg = Color(0xFFF7F8F6)
+private val FitnessMuted = Color(0xFF76847F)
+private val FitnessBorder = Color(0xFFE4EBE7)
+private val FitnessDanger = Color(0xFFC76568)
 
 private data class FitnessGoalSwitch(
     val id: String,
